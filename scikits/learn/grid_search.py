@@ -82,6 +82,7 @@ def fit_grid_point(X, y, base_clf, clf_params, train, test, loss_func,
     clf = copy.deepcopy(base_clf)
     clf._set_params(**clf_params)
 
+<<<<<<< HEAD
     if isinstance(X, list) or isinstance(X, tuple):
         X_train = [X[i] for i, cond in enumerate(train) if cond]
         X_test = [X[i] for i, cond in enumerate(test) if cond]
@@ -124,6 +125,54 @@ def fit_grid_point(X, y, base_clf, clf_params, train, test, loss_func,
                                 short_format_time(time.time() - start_time))
         print "[GridSearchCV] %s %s" % ((64-len(end_msg))*'.', end_msg)
     return this_score, clf, this_n_test_samples
+=======
+    score = 0.
+    n_test_samples = 0.
+    for train, test in cv:
+        if isinstance(X, list) or isinstance(X, tuple):
+            X_train = [X[i] for i, cond in enumerate(train) if cond]
+            X_test = [X[i] for i, cond in enumerate(test) if cond]
+        else:
+            if sp.issparse(X):
+                # For sparse matrices, slicing only works with indices
+                # (no masked array). Convert to CSR format for efficiency and
+                # because some sparse formats don't support row slicing.
+                X = sp.csr_matrix(X)
+                ind = np.arange(X.shape[0])
+                train = ind[train]
+                test = ind[test]
+            X_train = X[train]
+            X_test = X[test]
+        if y is not None:
+            y_test = y[test]
+            y_train = y[train]
+        else:
+            y_test = None
+            y_train = None
+
+        clf.fit(X_train, y_train, **fit_params)
+
+        if loss_func is not None:
+            y_pred = clf.predict(X_test)
+            this_score = -loss_func(y_test, y_pred)
+        elif score_func is not None:
+            y_pred = clf.predict(X_test)
+            this_score = score_func(y_test, y_pred)
+        else:
+            this_score = clf.score(X_test, y_test)
+        if iid:
+            if y is not None:
+                this_n_test_samples = y.shape[0]
+            else:
+                this_n_test_samples = X.shape[0]
+            this_score *= this_n_test_samples
+            n_test_samples += this_n_test_samples
+        score += this_score
+    if iid:
+        score /= n_test_samples
+
+    return score, clf
+>>>>>>> alex/hcluster2
 
 
 class GridSearchCV(BaseEstimator):
@@ -204,14 +253,12 @@ class GridSearchCV(BaseEstimator):
                         or hasattr(estimator, 'score')), (
             "estimator should a be an estimator implementing 'fit' and "
             "'predict' or 'score' methods, %s (type %s) was passed" %
-                    (estimator, type(estimator))
-            )
+                    (estimator, type(estimator)))
         if loss_func is None and score_func is None:
             assert hasattr(estimator, 'score'), ValueError(
                     "If no loss_func is specified, the estimator passed "
                     "should have a 'score' method. The estimator %s "
-                    "does not." % estimator
-                    )
+                    "does not." % estimator)
 
         self.estimator = estimator
         self.param_grid = param_grid
@@ -320,3 +367,4 @@ class GridSearchCV(BaseEstimator):
         # found has a score function.
         y_predicted = self.predict(X)
         return self.score_func(y, y_predicted)
+
