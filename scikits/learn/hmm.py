@@ -463,7 +463,8 @@ class _BaseHMM(BaseEstimator):
         after rank and beam pruning.
         """
         # Beam pruning
-        threshlogprob = logsum(lattice_frame) + beamlogprob
+        threshlogprob = (logsum(lattice_frame) + beamlogprob
+                         - np.finfo(np.float32).eps)
 
         # Rank pruning
         if maxrank:
