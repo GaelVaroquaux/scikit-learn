@@ -1,6 +1,8 @@
 # Author: Vlad Niculae
 # License: BSD
 
+import sys
+
 import numpy as np
 from .. import SparsePCA
 from numpy.testing import assert_array_almost_equal, assert_equal
@@ -30,6 +32,7 @@ def generate_toy_data(n_atoms, n_samples, image_size):
 # SparsePCA can be a bit slow. To avoid having test times go up, we
 # test different aspects of the code in the same test
 
+
 def test_correct_shapes():
     np.random.seed(0)
     X = np.random.randn(12, 10)
@@ -46,7 +49,16 @@ def test_fit_transform():
     U2 = spca_lars.transform(Y)
     assert_array_almost_equal(U1, U2)
     # Smoke test multiple CPUs
-    U2 = SparsePCA(n_components=3, n_jobs=2).fit(Y).transform(Y)
+    if sys.platform == 'win32':  # fake parallelism for win32
+        import scikits.learn.externals.joblib.parallel as joblib_par
+        _mp = joblib_par.multiprocessing
+        joblib_par.multiprocessing = None
+        try:
+            U2 = SparsePCA(n_components=3, n_jobs=2).fit(Y).transform(Y)
+        finally:
+            joblib_par.multiprocessing = _mp
+    else:  # we can efficiently use parallelism
+        U2 = SparsePCA(n_components=3, n_jobs=2).fit(Y).transform(Y)
     assert_array_almost_equal(U1, U2)
     # Test that CD gives similar results
     spca_lasso = SparsePCA(n_components=3, method='cd').fit(Y)
@@ -58,4 +70,3 @@ def test_fit_transform_tall():
     U1 = SparsePCA(n_components=3).fit_transform(Y)
     U2 = SparsePCA(n_components=3).fit(Y).transform(Y)
     assert_array_almost_equal(U1, U2)
-
