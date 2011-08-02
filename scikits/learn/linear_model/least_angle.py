@@ -60,13 +60,12 @@ def lars_path(X, y, Xy=None, Gram=None, max_features=None, max_iter=500,
     Returns
     --------
     alphas: array, shape: (max_features + 1,)
-        Maximum of covariances (in absolute value) at each
-        iteration.
+        Maximum of covariances (in absolute value) at each iteration.
 
     active: array, shape (max_features,)
         Indices of active variables at the end of the path.
 
-    coefs: array, shape (n_features, max_features+1)
+    coefs: array, shape (n_features, max_features + 1)
         Coefficients along the path
 
     See also
@@ -368,7 +367,7 @@ class Lars(LinearModel):
     --------
     lars_path, LassoLARS, LarsCV, LassoLarsCV
     """
-    def __init__(self, fit_intercept=True, verbose=False, normalize=True, 
+    def __init__(self, fit_intercept=True, verbose=False, normalize=True,
                  precompute='auto', max_iter=500,
                  eps=np.finfo(np.float).eps):
         self.fit_intercept = fit_intercept
@@ -376,7 +375,7 @@ class Lars(LinearModel):
         self.verbose = verbose
         self.normalize = normalize
         self.method = 'lar'
-        self.precompute = precompute 
+        self.precompute = precompute
         self.eps = eps
 
     def fit(self, X, y, max_features=None, overwrite_X=False, **params):
@@ -425,7 +424,7 @@ class Lars(LinearModel):
                   Gram=Gram, overwrite_X=overwrite_X,
                   overwrite_Gram=True, alpha_min=alpha,
                   method=self.method, verbose=self.verbose,
-                  max_features=max_features, max_iter=self.max_iter, 
+                  max_features=max_features, max_iter=self.max_iter,
                   eps=self.eps)
 
         if self.normalize:
@@ -502,8 +501,8 @@ class LassoLars(Lars):
     lars_path, Lasso
     """
 
-    def __init__(self, alpha=1.0, fit_intercept=True, verbose=False, 
-                 normalize=True, precompute='auto', max_iter=500, 
+    def __init__(self, alpha=1.0, fit_intercept=True, verbose=False,
+                 normalize=True, precompute='auto', max_iter=500,
                  eps=np.finfo(np.float).eps):
         self.alpha = alpha
         self.fit_intercept = fit_intercept
@@ -525,12 +524,13 @@ class LassoLARS(LassoLars):
     pass
 LassoLARS = deprecated("Use LassoLars instead")(LassoLARS)
 
-################################################################################
+
+###############################################################################
 # Cross-validated estimator classes
 
 def _lars_path_residues(X_train, y_train, X_test, y_test, Gram=None,
-                     overwrite_data=False, method='lars', verbose=False, 
-                     fit_intercept=True, normalize=True, max_iter=500, 
+                     overwrite_data=False, method='lars', verbose=False,
+                     fit_intercept=True, normalize=True, max_iter=500,
                      eps=np.finfo(np.float).eps):
     """Compute the residues on left-out data for a full LARS path
 
@@ -546,7 +546,7 @@ def _lars_path_residues(X_train, y_train, X_test, y_test, Gram=None,
         The target variable to compute the residues on
     Gram: None, 'auto', array, shape: (n_features, n_features), optional
         Precomputed Gram matrix (X' * X), if 'auto', the Gram
-        matrix is precomputed from the given X, if there are more samples 
+        matrix is precomputed from the given X, if there are more samples
         than features
     overwrite_data: boolean, optional
         Whether X_train, X_test, y_train and y_test get overriden
@@ -580,10 +580,10 @@ def _lars_path_residues(X_train, y_train, X_test, y_test, Gram=None,
     active: array, shape (max_features,)
         Indices of active variables at the end of the path.
 
-    coefs: array, shape (n_features, max_features+1)
+    coefs: array, shape (n_features, max_features + 1)
         Coefficients along the path
 
-    residues: array, shape (n_features, max_features+1)
+    residues: array, shape (n_features, max_features + 1)
         Residues of the prediction on the test data
     """
     if not overwrite_data:
@@ -606,7 +606,7 @@ def _lars_path_residues(X_train, y_train, X_test, y_test, Gram=None,
         y_mean = y_train.mean(axis=0)
         y_train -= y_mean
         y_test -= y_mean
-    alphas, active, coefs = lars_path(X_train, y_train, Gram=Gram, 
+    alphas, active, coefs = lars_path(X_train, y_train, Gram=Gram,
                             overwrite_X=True, overwrite_Gram=True,
                             method=method, verbose=verbose,
                             max_iter=max_iter, eps=eps)
@@ -673,8 +673,8 @@ class LarsCV(LARS):
 
     method = 'lar'
 
-    def __init__(self, fit_intercept=True, verbose=False, max_iter=500, 
-                 normalize=True, precompute='auto', cv=None, n_jobs=1, 
+    def __init__(self, fit_intercept=True, verbose=False, max_iter=500,
+                 normalize=True, precompute='auto', cv=None, n_jobs=1,
                  eps=np.finfo(np.float).eps):
         self.fit_intercept = fit_intercept
         self.max_iter = max_iter
@@ -710,13 +710,13 @@ class LarsCV(LARS):
         Gram = 'auto' if self.precompute else None
 
         cv_paths = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
-                    delayed(_lars_path_residues)(X[train], y[train], 
-                            X[test], y[test], Gram=Gram, 
-                            overwrite_data=True, method=self.method, 
-                            verbose=max(0, self.verbose-1),
+                    delayed(_lars_path_residues)(X[train], y[train],
+                            X[test], y[test], Gram=Gram,
+                            overwrite_data=True, method=self.method,
+                            verbose=max(0, self.verbose - 1),
                             normalize=self.normalize,
                             fit_intercept=self.fit_intercept,
-                            max_iter=self.max_iter, 
+                            max_iter=self.max_iter,
                             eps=self.eps)
                     for train, test in cv)
         all_alphas = np.concatenate(zip(*cv_paths)[0])
@@ -724,8 +724,8 @@ class LarsCV(LARS):
 
         mse_path = list()
         for alphas, active, coefs, residues in cv_paths:
-            this_residues = interpolate.interp1d(alphas[::-1], 
-                                                 residues[::-1], 
+            this_residues = interpolate.interp1d(alphas[::-1],
+                                                 residues[::-1],
                                                  bounds_error=False,
                                                  fill_value=residues.max(),
                                                  axis=0)(all_alphas)
@@ -752,7 +752,7 @@ class LarsCV(LARS):
 
 
 class LassoLarsCV(LarsCV):
-    """Cross-validated Lasso, using the LARS algorithm 
+    """Cross-validated Lasso, using the LARS algorithm
 
     Parameters
     ----------
@@ -818,7 +818,7 @@ class LassoLarsCV(LarsCV):
     unlike the LassoCV, it find the relevent alphas values by itself.
     In general, because of this property, it will be more stable.
     However, it is more fragile to heavily multicollinear datasets.
-    
+
     It is more efficient than the LassoCV if only a small number of
     features are selected compared to the total number, for instance if
     there are very few samples compared to the number of features.
@@ -829,4 +829,3 @@ class LassoLarsCV(LarsCV):
     """
 
     method = 'lasso'
-
