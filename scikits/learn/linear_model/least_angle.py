@@ -337,7 +337,9 @@ class Lars(LinearModel):
     eps: float, optional
         The machine-precision regularization in the computation of the
         Cholesky diagonal factors. Increase this for very ill-conditioned
-        systems.
+        systems. Unlike the 'tol' parameter in some iterative 
+        optimization-based algorithms, this parameter does not control
+        the tolerance of the optimization.
 
 
     Attributes
@@ -468,7 +470,9 @@ class LassoLars(Lars):
     eps: float, optional
         The machine-precision regularization in the computation of the
         Cholesky diagonal factors. Increase this for very ill-conditioned
-        systems.
+        systems. Unlike the 'tol' parameter in some iterative 
+        optimization-based algorithms, this parameter does not control
+        the tolerance of the optimization.
 
 
     Attributes
@@ -560,9 +564,11 @@ def _lars_path_residues(X_train, y_train, X_test, y_test, Gram=None,
     max_iter: integer, optional
         Maximum number of iterations to perform.
     eps: float, optional
-        The machine-precision regularization in the computation of the
+            The machine-precision regularization in the computation of the
         Cholesky diagonal factors. Increase this for very ill-conditioned
-        systems.
+        systems. Unlike the 'tol' parameter in some iterative 
+        optimization-based algorithms, this parameter does not control
+        the tolerance of the optimization.
 
 
     Returns
