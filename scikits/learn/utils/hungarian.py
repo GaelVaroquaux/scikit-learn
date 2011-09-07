@@ -39,29 +39,42 @@ class _Hungarian(object):
 
     def compute(self, cost_matrix):
         """
-        Compute the indexes for the lowest-cost pairings between rows and
+        Compute the indices for the lowest-cost pairings between rows and
         columns in the database. Returns a list of (row, column) tuples
         that can be used to traverse the matrix.
 
         Parameters
         ===========
-        cost_matrix: 2D square matrix
-                The cost matrix. 
+        cost_matrix: 2D matrix
+                The cost matrix. Does not have to be square.
 
         Returns
         ========
         indices: 2D array of indices
-            The pairs of (col, row) indices in the original array giving
+            The pairs of (row, col) indices in the original array giving
             the original ordering.
         """
-        self.C = cost_matrix.copy()
+        cost_matrix = np.atleast_2d(cost_matrix)
+
+        # If there are more rows (n) than columns (m), then the algorithm
+        # will not be able to work correctly. Therefore, we
+        # transpose the cost function when needed. Just have to
+        # remember to swap the result columns later in this function.
+        doTranspose = (cost_matrix.shape[1] < cost_matrix.shape[0])
+        if doTranspose :
+            self.C = (cost_matrix.T).copy()
+        else :
+            self.C = cost_matrix.copy()
+
+        # At this point, m >= n.
         self.n = n = self.C.shape[0]
+        self.m = m = self.C.shape[1]
         self.row_uncovered = np.ones(n, dtype=np.bool)
-        self.col_uncovered = np.ones(n, dtype=np.bool)
+        self.col_uncovered = np.ones(m, dtype=np.bool)
         self.Z0_r = 0
         self.Z0_c = 0
-        self.path = np.zeros((2*n, 2), dtype=int)
-        self.marked = np.zeros((n, n), dtype=int)
+        self.path = np.zeros((n+m, 2), dtype=int)
+        self.marked = np.zeros((n, m), dtype=int)
 
         done = False
         step = 1
@@ -72,6 +85,11 @@ class _Hungarian(object):
                   5 : self._step5,
                   6 : self._step6 }
 
+        if m == 0 or n == 0 :
+            # No need to bother with assignments if one of the dimensions
+            # of the cost matrix is zero-length.
+            done = True
+
         while not done:
             try:
                 func = steps[step]
@@ -81,6 +99,11 @@ class _Hungarian(object):
 
         # Look for the starred columns
         results = np.array(np.where(self.marked == 1)).T
+
+        # We need to swap the columns because we originally
+        # did a transpose on the input cost matrix.
+        if doTranspose :
+            results = results[:, ::-1]
 
         return results.tolist()
 
@@ -111,7 +134,7 @@ class _Hungarian(object):
         marked = (self.marked == 1)
         self.col_uncovered[np.any(marked, axis=0)] = False
 
-        if marked.sum() >= self.n:
+        if marked.sum() >= self.n :
             return 7 # done
         else:
             return 4
@@ -129,11 +152,10 @@ class _Hungarian(object):
         covered_C = C*self.row_uncovered[:, np.newaxis]
         covered_C *= self.col_uncovered.astype(np.int)
         n = self.n
+        m = self.m
         while True:
             # Find an uncovered zero
-            raveled_idx = np.argmax(covered_C)
-            col = raveled_idx % n
-            row = raveled_idx // n
+            row, col = np.unravel_index(np.argmax(covered_C), (n, m))
             if covered_C[row, col] == 0:
                 return 6
             else:
@@ -212,10 +234,11 @@ class _Hungarian(object):
         lines.
         """
         # the smallest uncovered value in the matrix
-        minval = np.min(self.C[self.row_uncovered], axis=0)
-        minval = np.min(minval[self.col_uncovered])
-        self.C[np.logical_not(self.row_uncovered)] += minval
-        self.C[:, self.col_uncovered] -= minval
+        if np.any(self.row_uncovered) and np.any(self.col_uncovered):
+            minval = np.min(self.C[self.row_uncovered], axis=0)
+            minval = np.min(minval[self.col_uncovered])
+            self.C[np.logical_not(self.row_uncovered)] += minval
+            self.C[:, self.col_uncovered] -= minval
         return 4
 
     def _find_prime_in_row(self, row):
@@ -244,7 +267,12 @@ def hungarian(cost_matrix):
     H = _Hungarian()
     indices = H.compute(cost_matrix)
     indices.sort()
-    return np.array(indices).T[1]
+    # Re-force dtype to ints in case of empty list
+    indices = np.array(indices, dtype=int)
+    # Make sure the array is 2D with 2 columns.
+    # This is needed when dealing with an empty list
+    indices.shape = (-1, 2)
+    return indices
 
 
 def find_permutation(vectors, reference):

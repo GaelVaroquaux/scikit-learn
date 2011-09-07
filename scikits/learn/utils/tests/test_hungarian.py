@@ -15,11 +15,11 @@ def test_hungarian():
                 ),
 
                 ## Rectangular variant
-                #([[400, 150, 400, 1],
-                #  [400, 450, 600, 2],
-                #  [300, 225, 300, 3]],
-                # 452 # expected cost
-                #),
+                ([[400, 150, 400, 1],
+                  [400, 450, 600, 2],
+                  [300, 225, 300, 3]],
+                 452 # expected cost
+                ),
 
                 # Square
                 ([[10, 10,  8],
@@ -29,11 +29,16 @@ def test_hungarian():
                 ),
 
                 ## Rectangular variant
-                #([[10, 10,  8, 11],
-                #  [ 9,  8,  1, 1],
-                #  [ 9,  7,  4, 10]],
-                # 15
-                #),
+                ([[10, 10,  8, 11],
+                  [ 9,  8,  1, 1],
+                  [ 9,  7,  4, 10]],
+                 15
+                ),
+
+                ## n == 2, m == 0 matrix
+                ([[], []],
+                 0
+                ),
                ]
 
     m = _Hungarian()
@@ -47,10 +52,25 @@ def test_hungarian():
             total_cost += x
         assert expected_total == total_cost
 
+        indexes = m.compute(cost_matrix.T)
+        total_cost = 0
+        for c, r in indexes :
+            x = cost_matrix[r, c]
+            total_cost += x
+        assert expected_total == total_cost
+
 
 def test_find_permutation():
     A = np.random.random((10, 100))
     B = A[::-1]
     np.testing.assert_array_equal(find_permutation(B, A),
-                                  np.arange(10)[::-1])
+                                  zip(np.arange(10),
+                                      np.arange(10)[::-1]))
+
+
+if __name__ == '__main__' :
+    print "find_permutations test..."
+    test_find_permutation()
+    print "Hungarian test..."
+    test_hungarian()
 
