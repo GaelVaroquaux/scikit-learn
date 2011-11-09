@@ -238,3 +238,4 @@ pl.xlim(embedding[0].min() - .15*embedding[0].ptp(),
 pl.ylim(embedding[1].min() - .03*embedding[1].ptp(),
         embedding[1].max() + .03*embedding[1].ptp())
 
+pl.show()
