@@ -4,10 +4,13 @@ import warnings
 import numpy as np
 import scipy.sparse as sp
 
+from numpy.testing import assert_array_equal
+
 from sklearn.utils import check_random_state
 from sklearn.utils import deprecated
 from sklearn.utils import resample
 from sklearn.utils import safe_mask
+from sklearn.utils.extmath import safe_sparse_dot
 
 
 def test_make_rng():
@@ -87,3 +90,19 @@ def test_safe_mask():
 
     mask = safe_mask(X_csr, mask)
     assert_equal(X_csr[mask].shape[0], 3)
+
+
+def test_safe_sparse_dot():
+    from scipy.sparse import csr_matrix, coo_matrix, lil_matrix
+    from itertools import product
+
+    X = np.array([[1., 2., 3.]])
+    ref = np.dot(X.T, X)
+    formats = (np.array, csr_matrix, coo_matrix, lil_matrix)
+    for fmt_l, fmt_r in product(formats, formats):
+        assert_array_equal(safe_sparse_dot(fmt_l(X.T), fmt_r(X),
+                           dense_output=True), ref)
+        # test the use of preallocated space
+        out = np.empty_like(ref)
+        safe_sparse_dot(fmt_l(X.T), fmt_r(X), dense_output=out)
+        assert_array_equal(out, ref)
