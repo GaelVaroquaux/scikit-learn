@@ -22,9 +22,151 @@ from ..metrics import euclidean_distances
 from . import _hierarchical
 from ._feature_agglomeration import AgglomerationTransform
 
+###############################################################################
+# Ward's algorithm
+
+def hc_tree(X, distance, dense_function=None, connectivity=None, n_components=None,
+            copy=True, n_clusters=None):
+    X = np.asarray(X)
+    if X.ndim == 1:
+        X = np.reshape(X, (-1, 1))
+    n_samples, n_features = X.shape
+
+    if connectivity is None and dense_function is not None:
+        if n_clusters is not None:
+            warnings.warn('Early stopping is implemented only for '
+                             'structured Ward clustering (i.e. with '
+                             'explicit connectivity.', stacklevel=2)
+        out = dense_function(X)
+        children_ = out[:, :2].astype(np.int)
+        return children_, 1, n_samples, None
+
+    # Compute the number of nodes
+    if n_components is None:
+        n_components, labels = cs_graph_components(connectivity)
+
+    # Convert connectivity matrix to LIL with a copy if needed
+    if sparse.isspmatrix_lil(connectivity) and copy:
+        connectivity = connectivity.copy()
+    elif not sparse.isspmatrix(connectivity):
+        connectivity = sparse.lil_matrix(connectivity)
+    else:
+        connectivity = connectivity.tolil()
+
+    if n_components > 1:
+        warnings.warn("the number of connected components of the"
+                      " connectivity matrix is %d > 1. Completing it to avoid"
+                      " stopping the tree early."
+                      % n_components)
+        connectivity = _fix_connectivity(X, connectivity,
+                                            n_components, labels)
+        n_components = 1
+
+    if n_clusters is None:
+        n_nodes = 2 * n_samples - n_components
+    else:
+        assert n_clusters <= n_samples
+        n_nodes = 2 * n_samples - n_clusters
+
+    if (connectivity.shape[0] != n_samples or
+        connectivity.shape[1] != n_samples):
+        raise ValueError('Wrong shape for connectivity matrix: %s '
+                         'when X is %s' % (connectivity.shape, X.shape))
+
+    # create inertia matrix
+    coord_row = []
+    coord_col = []
+    A = []
+    for ind, row in enumerate(connectivity.rows):
+        A.append(row)
+        # We keep only the upper triangular for the moments
+        # Generator expressions are faster than arrays on the following
+        row = [i for i in row if i < ind]
+        coord_row.extend(len(row) * [ind, ])
+        coord_col.extend(row)
+
+    coord_row = np.array(coord_row, dtype=np.int)
+    coord_col = np.array(coord_col, dtype=np.int)
+
+    inertia = distance.initial_computation(X, coord_row, coord_col, n_nodes)
+    inertia = zip(inertia, coord_row, coord_col)
+    heapify(inertia)
+
+    # prepare the main fields
+    parent = np.arange(n_nodes, dtype=np.int)
+    heights = np.zeros(n_nodes)
+    used_node = np.ones(n_nodes, dtype=bool)
+    children = []
+
+    not_visited = np.empty(n_nodes, dtype=np.int8)
+
+    # recursive merge loop
+    for k in xrange(n_samples, n_nodes):
+        # identify the merge
+        while True:
+            inert, i, j = heappop(inertia)
+            if used_node[i] and used_node[j]:
+                break
+        parent[i], parent[j], heights[k] = k, k, inert
+        children.append([i, j])
+        used_node[i] = used_node[j] = False
+
+        # update the structure matrix A and the inertia matrix
+        coord_col = []
+        not_visited.fill(1)
+        not_visited[k] = 0
+        _hierarchical._get_parents(A[i], coord_col, parent, not_visited)
+        _hierarchical._get_parents(A[j], coord_col, parent, not_visited)
+        # List comprehension is faster than a for loop
+        [A[l].append(k) for l in coord_col]
+        A.append(coord_col)
+        coord_col = np.array(coord_col, dtype=np.int)
+        coord_row = np.empty_like(coord_col)
+        coord_row.fill(k)
+
+        new_inertia = distance.compute_new(k, i, j, coord_row, coord_col)
+        # List comprehension is faster than a for loop
+        [heappush(inertia, (new_inertia[idx], k, coord_col[idx]))
+            for idx in xrange(len(coord_col))]
+
+    # Separate leaves in children (empty lists up to now)
+    n_leaves = n_samples
+    children = np.array(children)  # return numpy array for efficient caching
+
+    return children, n_components, n_leaves, parent
+
 
 ###############################################################################
 # Ward's algorithm
+
+class _WardDistance(object):
+
+    def initial_computation(self, X, coord_row, coord_col, n_nodes):
+        n_samples, n_features = X.shape
+        # build moments as a list
+        moments_1 = np.zeros(n_nodes)
+        moments_1[:n_samples] = 1
+        moments_2 = np.zeros((n_nodes, n_features))
+        moments_2[:n_samples] = X
+        inertia = np.empty(len(coord_row), dtype=np.float)
+        _hierarchical.compute_ward_dist(moments_1, moments_2,
+                                coord_row, coord_col, inertia)
+        self.moments_1 = moments_1
+        self.moments_2 = moments_2
+        return inertia
+
+    def compute_new(self, k, i, j, coord_row, coord_col):
+        n_additions = len(coord_row)
+
+        # update the moments
+        self.moments_1[k] = self.moments_1[i] + self.moments_1[j]
+        self.moments_2[k] = self.moments_2[i] + self.moments_2[j]
+
+        new_inertia = np.empty(n_additions, dtype=np.float)
+        _hierarchical.compute_ward_dist(self.moments_1, self.moments_2,
+                                        coord_row, coord_col, new_inertia)
+        return new_inertia
+
 
 def ward_tree(X, connectivity=None, n_components=None, copy=True,
               n_clusters=None):
@@ -78,127 +220,9 @@ def ward_tree(X, connectivity=None, n_components=None, copy=True,
         The parent of each node. Only returned when a connectivity matrix
         is specified, elsewhere 'None' is returned.
     """
-    X = np.asarray(X)
-    if X.ndim == 1:
-        X = np.reshape(X, (-1, 1))
-    n_samples, n_features = X.shape
-
-    if connectivity is None:
-        if n_clusters is not None:
-            warnings.warn('Early stopping is implemented only for '
-                             'structured Ward clustering (i.e. with '
-                             'explicit connectivity.', stacklevel=2)
-        out = hierarchy.ward(X)
-        children_ = out[:, :2].astype(np.int)
-        return children_, 1, n_samples, None
-
-    # Compute the number of nodes
-    if n_components is None:
-        n_components, labels = cs_graph_components(connectivity)
-
-    # Convert connectivity matrix to LIL with a copy if needed
-    if sparse.isspmatrix_lil(connectivity) and copy:
-        connectivity = connectivity.copy()
-    elif not sparse.isspmatrix(connectivity):
-        connectivity = sparse.lil_matrix(connectivity)
-    else:
-        connectivity = connectivity.tolil()
-
-    if n_components > 1:
-        warnings.warn("the number of connected components of the"
-        " connectivity matrix is %d > 1. Completing it to avoid"
-        " stopping the tree early."
-        % n_components)
-        connectivity = _fix_connectivity(X, connectivity,
-                                            n_components, labels)
-        n_components = 1
-
-    if n_clusters is None:
-        n_nodes = 2 * n_samples - n_components
-    else:
-        assert n_clusters <= n_samples
-        n_nodes = 2 * n_samples - n_clusters
-
-    if (connectivity.shape[0] != n_samples or
-        connectivity.shape[1] != n_samples):
-        raise ValueError('Wrong shape for connectivity matrix: %s '
-                         'when X is %s' % (connectivity.shape, X.shape))
-
-    # create inertia matrix
-    coord_row = []
-    coord_col = []
-    A = []
-    for ind, row in enumerate(connectivity.rows):
-        A.append(row)
-        # We keep only the upper triangular for the moments
-        # Generator expressions are faster than arrays on the following
-        row = [i for i in row if i < ind]
-        coord_row.extend(len(row) * [ind, ])
-        coord_col.extend(row)
-
-    coord_row = np.array(coord_row, dtype=np.int)
-    coord_col = np.array(coord_col, dtype=np.int)
-
-    # build moments as a list
-    moments_1 = np.zeros(n_nodes)
-    moments_1[:n_samples] = 1
-    moments_2 = np.zeros((n_nodes, n_features))
-    moments_2[:n_samples] = X
-    inertia = np.empty(len(coord_row), dtype=np.float)
-    _hierarchical.compute_ward_dist(moments_1, moments_2,
-                             coord_row, coord_col, inertia)
-    inertia = zip(inertia, coord_row, coord_col)
-    heapify(inertia)
-
-    # prepare the main fields
-    parent = np.arange(n_nodes, dtype=np.int)
-    heights = np.zeros(n_nodes)
-    used_node = np.ones(n_nodes, dtype=bool)
-    children = []
-
-    not_visited = np.empty(n_nodes, dtype=np.int8)
-
-    # recursive merge loop
-    for k in xrange(n_samples, n_nodes):
-        # identify the merge
-        while True:
-            inert, i, j = heappop(inertia)
-            if used_node[i] and used_node[j]:
-                break
-        parent[i], parent[j], heights[k] = k, k, inert
-        children.append([i, j])
-        used_node[i] = used_node[j] = False
-
-        # update the moments
-        moments_1[k] = moments_1[i] + moments_1[j]
-        moments_2[k] = moments_2[i] + moments_2[j]
-
-        # update the structure matrix A and the inertia matrix
-        coord_col = []
-        not_visited.fill(1)
-        not_visited[k] = 0
-        _hierarchical._get_parents(A[i], coord_col, parent, not_visited)
-        _hierarchical._get_parents(A[j], coord_col, parent, not_visited)
-        # List comprehension is faster than a for loop
-        [A[l].append(k) for l in coord_col]
-        A.append(coord_col)
-        coord_col = np.array(coord_col, dtype=np.int)
-        coord_row = np.empty_like(coord_col)
-        coord_row.fill(k)
-        n_additions = len(coord_row)
-        ini = np.empty(n_additions, dtype=np.float)
-
-        _hierarchical.compute_ward_dist(moments_1, moments_2,
-                                        coord_row, coord_col, ini)
-        # List comprehension is faster than a for loop
-        [heappush(inertia, (ini[idx], k, coord_col[idx]))
-            for idx in xrange(n_additions)]
-
-    # Separate leaves in children (empty lists up to now)
-    n_leaves = n_samples
-    children = np.array(children)  # return numpy array for efficient caching
-
-    return children, n_components, n_leaves, parent
+    return hc_tree(X, distance=_WardDistance(), dense_function=hierarchy.ward,
+                   connectivity=connectivity,
+                   n_components=n_components, copy=copy, n_clusters=n_clusters)
 
 
 ###############################################################################
