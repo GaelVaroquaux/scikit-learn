@@ -94,7 +94,6 @@ def hc_tree(X, distance, dense_function=None, connectivity=None, n_components=No
 
     # prepare the main fields
     parent = np.arange(n_nodes, dtype=np.int)
-    heights = np.zeros(n_nodes)
     used_node = np.ones(n_nodes, dtype=bool)
     children = []
 
@@ -107,7 +106,7 @@ def hc_tree(X, distance, dense_function=None, connectivity=None, n_components=No
             inert, i, j = heappop(inertia)
             if used_node[i] and used_node[j]:
                 break
-        parent[i], parent[j], heights[k] = k, k, inert
+        parent[i] = parent[j] = k
         children.append([i, j])
         used_node[i] = used_node[j] = False
 
@@ -121,10 +120,8 @@ def hc_tree(X, distance, dense_function=None, connectivity=None, n_components=No
         [A[l].append(k) for l in coord_col]
         A.append(coord_col)
         coord_col = np.array(coord_col, dtype=np.int)
-        coord_row = np.empty_like(coord_col)
-        coord_row.fill(k)
 
-        new_inertia = distance.compute_new(k, i, j, coord_row, coord_col)
+        new_inertia = distance.compute_new(k, i, j, coord_col)
         # List comprehension is faster than a for loop
         [heappush(inertia, (new_inertia[idx], k, coord_col[idx]))
             for idx in xrange(len(coord_col))]
@@ -134,6 +131,28 @@ def hc_tree(X, distance, dense_function=None, connectivity=None, n_components=No
     children = np.array(children)  # return numpy array for efficient caching
 
     return children, n_components, n_leaves, parent
+
+
+###############################################################################
+# For non fully-connected graphs
+
+def _fix_connectivity(X, connectivity, n_components, labels):
+    """
+    Warning: modifies connectivity in place
+    """
+    for i in range(n_components):
+        idx_i = np.where(labels == i)[0]
+        Xi = X[idx_i]
+        for j in range(i):
+            idx_j = np.where(labels == j)[0]
+            Xj = X[idx_j]
+            D = euclidean_distances(Xi, Xj)
+            ii, jj = np.where(D == np.min(D))
+            ii = ii[0]
+            jj = jj[0]
+            connectivity[idx_i[ii], idx_j[jj]] = True
+            connectivity[idx_j[jj], idx_i[ii]] = True
+    return connectivity
 
 
 ###############################################################################
@@ -155,7 +174,9 @@ class _WardDistance(object):
         self.moments_2 = moments_2
         return inertia
 
-    def compute_new(self, k, i, j, coord_row, coord_col):
+    def compute_new(self, k, i, j, coord_col):
+        coord_row = np.empty_like(coord_col)
+        coord_row.fill(k)
         n_additions = len(coord_row)
 
         # update the moments
@@ -226,25 +247,34 @@ def ward_tree(X, connectivity=None, n_components=None, copy=True,
 
 
 ###############################################################################
-# For non fully-connected graphs
+# Single linkage
 
-def _fix_connectivity(X, connectivity, n_components, labels):
-    """
-    Warning: modifies connectivity in place
-    """
-    for i in range(n_components):
-        idx_i = np.where(labels == i)[0]
-        Xi = X[idx_i]
-        for j in range(i):
-            idx_j = np.where(labels == j)[0]
-            Xj = X[idx_j]
-            D = euclidean_distances(Xi, Xj)
-            ii, jj = np.where(D == np.min(D))
-            ii = ii[0]
-            jj = jj[0]
-            connectivity[idx_i[ii], idx_j[jj]] = True
-            connectivity[idx_j[jj], idx_i[ii]] = True
-    return connectivity
+# XXX: should be able to work on more than l2 distance
+
+class _SingleLinkageDistance(object):
+
+    def initial_computation(self, X, coord_row, coord_col, n_nodes):
+        distances = np.empty(n_nodes)
+        distances_buffer = (X[:, coord_row] - X[:, coord_col])
+        distances_buffer **= 2
+        distances[:len(coord_col)] = distances_buffer.sum(axis=0)
+        del distances_buffer
+        self.distances = distances
+        return distances
+
+    def compute_new(self, k, i, j, all_parents):
+        # update the distances
+        #self.distances[k] = min(self.distances[i], self.distances[j])
+        new_inertia = None
+        return new_inertia
+
+
+def single_linkage_tree(X, connectivity=None, n_components=None, copy=True,
+              n_clusters=None):
+    return hc_tree(X, distance=_SingleLinkageDistance(),
+                   dense_function=hierarchy.linkage, connectivity=connectivity,
+                   n_components=n_components, copy=copy, n_clusters=n_clusters)
+
 
 ###############################################################################
 # Functions for cutting  hierarchical clustering tree
