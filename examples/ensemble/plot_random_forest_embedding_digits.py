@@ -60,7 +60,7 @@ def plot_embedding(X, title=None):
 print "Computing Random Forest embedding"
 # use RandomForestEmbedding to transform data
 hasher = ensemble.RandomForestEmbedding(n_estimators=200, random_state=0,
-                                        max_depth=3)
+                                        max_depth=5)
 t0 = time()
 X_transformed = hasher.fit_transform(X)
 pca = decomposition.RandomizedPCA(n_components=2)
