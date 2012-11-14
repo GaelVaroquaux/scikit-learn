@@ -59,7 +59,7 @@ def plot_embedding(X, title=None):
 # MDS  embedding of the digits dataset
 print "Computing Random Forest embedding"
 # use RandomForestEmbedding to transform data
-hasher = ensemble.RandomForestEmbedding(n_estimators=10, random_state=0,
+hasher = ensemble.RandomForestEmbedding(n_estimators=200, random_state=0,
                                         max_depth=3)
 t0 = time()
 X_transformed = hasher.fit_transform(X)
