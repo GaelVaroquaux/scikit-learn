@@ -428,7 +428,10 @@ cdef class Tree:
 
         cdef int X_stride = <int> X.strides[1] / <int> X.strides[0]
         cdef int X_argsorted_stride = <int> X_argsorted.strides[1] / <int> X_argsorted.strides[0]
-        cdef int y_stride = <int> y.strides[0] / <int> y.strides[1]
+        cdef int y_stride = <int> y.strides[0]
+        # Catter for non-zero y.strides[1]
+        if y.strides[1] != 0:
+            y_stride /= <int> y.strides[1]
 
         cdef int n_total_samples = y.shape[0]
         cdef int feature
