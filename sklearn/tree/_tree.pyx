@@ -426,10 +426,13 @@ cdef class Tree:
         cdef DOUBLE_t* y_ptr = <DOUBLE_t*> y.data
         cdef BOOL_t* sample_mask_ptr = <BOOL_t*> sample_mask.data
 
-        cdef int X_stride = <int> X.strides[1] / <int> X.strides[0]
-        cdef int X_argsorted_stride = <int> X_argsorted.strides[1] / <int> X_argsorted.strides[0]
+        cdef int X_stride = <int> X.strides[1]
+        if X.strides[0] != 0:
+            X_stride /= <int> X.strides[0]
+        cdef int X_argsorted_stride = <int> X_argsorted.strides[1]
+        if X_argsorted.strides[0] != 0:
+            X_argsorted_stride /= <int> X_argsorted.strides[0]
         cdef int y_stride = <int> y.strides[0]
-        # Catter for non-zero y.strides[1]
         if y.strides[1] != 0:
             y_stride /= <int> y.strides[1]
 
@@ -485,7 +488,9 @@ cdef class Tree:
                 n_total_samples = n_node_samples
 
                 X_ptr = <DTYPE_t*> X.data
-                X_stride = <int> X.strides[1] / <int> X.strides[0]
+                X_stride = <int> X.strides[1]
+                if X.strides[0] != 0:
+                    X_stride /= <int> X.strides[0]
                 sample_mask_ptr = <BOOL_t*> sample_mask.data
 
                 # !! No need to update the other variables
