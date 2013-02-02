@@ -55,7 +55,7 @@ combinations is retained.
 
 Scoring functions for GridSearchCV
 ----------------------------------
-By default, :class:`GridSearchCV` uses the ``score`` function of the estimator
+By default, :class:`GridSearchCV` uses the ``score`` method of the estimator
 to evaluate a parameter setting. These are the :func:`sklearn.metrics.accuracy_score` for classification
 and :func:`sklearn.metrics.r2_score` for regression.
 For some applications, other scoring function are better suited (for example in
@@ -75,7 +75,7 @@ Scoring                 Function
 'roc_auc'               :func:`sklearn.metrics.auc_score`
 
 **Clustering**
-'ari'`                  :func:`sklearn.metrics.adjusted_rand_score`
+'ari'                   :func:`sklearn.metrics.adjusted_rand_score`
 
 **Regression**
 'mse'                   :func:`sklearn.metrics.mean_squared_error`
