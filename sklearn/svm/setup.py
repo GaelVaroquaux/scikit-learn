@@ -70,6 +70,8 @@ def configuration(parent_package='', top_path=None):
     tron_sources = ['_tron.cpp',
                     join('src', 'liblinear', 'tron_helper.cpp'),
                     join('src', 'liblinear', 'tron.cpp')]
+    blas_info_cpp = blas_info.copy()
+    blas_info_cpp['language'] = 'cpp'
     config.add_extension('_tron',
                          sources=tron_sources,
                          libraries=blas_info.pop('libraries', ['blas']),
@@ -78,7 +80,7 @@ def configuration(parent_package='', top_path=None):
                                        blas_info.pop('include_dirs', [])],
                          depends=liblinear_depends,
                          # extra_compile_args=['-O0 -fno-inline'],
-                         **blas_info)
+                         **blas_info_cpp)
 
 
     # this should go *after* libsvm-skl
