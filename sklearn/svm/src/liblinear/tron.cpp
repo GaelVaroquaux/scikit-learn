@@ -41,19 +41,22 @@ void TRON::info(const char *fmt,...)
 	(*tron_print_string)(buf);
 }
 
-TRON::TRON(const function *fun_obj, double eps, int max_iter)
+TRON::TRON(const function *fun_obj, double tol, double gtol, int max_iter)
 {
 	this->fun_obj=const_cast<function *>(fun_obj);
-	this->eps=eps;
+	this->gtol=gtol;
+	this->tol=tol;
 	this->max_iter=max_iter;
 	tron_print_string = default_print;
+	this->n_iter = 0;
+	this->gnorm = 0.;
 }
 
 TRON::~TRON()
 {
 }
 
-void TRON::tron(double *w)
+void TRON::tron(double *w, double *g)
 {
 	// Parameters for updating the iterates.
 	double eta0 = 1e-4, eta1 = 0.25, eta2 = 0.75;
@@ -69,10 +72,11 @@ void TRON::tron(double *w)
 	double *s = new double[n];
 	double *r = new double[n];
 	double *w_new = new double[n];
-	double *g = new double[n];
 
+	/* Edit (Fabian): allow for warm restarts
 	for (i=0; i<n; i++)
 		w[i] = 0;
+	*/
 
         f = fun_obj->fun(w);
 	fun_obj->grad(w, g);
@@ -80,7 +84,7 @@ void TRON::tron(double *w)
 	double gnorm1 = delta;
 	double gnorm = gnorm1;
 
-	if (gnorm <= eps*gnorm1)
+	if (gnorm <= gtol)
 		search = 0;
 
 	iter = 1;
@@ -130,9 +134,11 @@ void TRON::tron(double *w)
 		        fun_obj->grad(w, g);
 
 			gnorm = dnrm2_(&n, g, &inc);
-			if (gnorm <= eps*gnorm1)
+			if (gnorm <= gtol)
 				break;
 		}
+		fun_obj->callback(w);
+
 		if (f < -1.0e+32)
 		{
 			info("WARNING: f < -1.0e+32\n");
@@ -143,15 +149,18 @@ void TRON::tron(double *w)
 			info("WARNING: actred and prered <= 0\n");
 			break;
 		}
-		if (fabs(actred) <= 1.0e-12*fabs(f) &&
-		    fabs(prered) <= 1.0e-12*fabs(f))
+		if (fabs(actred) <= tol*fabs(f) &&
+		    fabs(prered) <= tol*fabs(f))
 		{
 			info("WARNING: actred and prered too small\n");
 			break;
 		}
 	}
 
-	delete[] g;
+	this->n_iter = iter;
+	this->gnorm = gnorm;
+	this->fun = fun;
+
 	delete[] r;
 	delete[] w_new;
 	delete[] s;
