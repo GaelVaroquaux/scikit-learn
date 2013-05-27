@@ -1,3 +1,10 @@
+"""
+Wrapping the liblinear tron solver: trust region Newton optimizer.
+
+This file must be compiled with "cython --cplus"
+"""
+# Original author: Fabian Pedregosa
+
 from cython cimport view
 import numpy as np
 from scipy import optimize
@@ -62,6 +69,7 @@ cdef void c_hess(double *s, void *hess_py, double *b, int nr_variable,
     out = (<object> hess_py)(np.asarray(s0))
     out = np.asarray(out, dtype=np.float)
     b0[:] = out[:]
+
 
 cdef double c_callback(double *w, void *py_callback, int nr_variable,
                      void *py_args):

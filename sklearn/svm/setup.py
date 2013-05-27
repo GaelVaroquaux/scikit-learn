@@ -62,9 +62,23 @@ def configuration(parent_package='', top_path=None):
                                        blas_info.pop('include_dirs', [])],
                          depends=liblinear_depends,
                          # extra_compile_args=['-O0 -fno-inline'],
-                         ** blas_info)
+                         **blas_info)
 
     ## end liblinear module
+
+    ### The tron solver of liblinear
+    tron_sources = [join('src', 'liblinear', 'tron_helper.cpp'),
+                    join('src', 'liblinear', 'tron.cpp')]
+    config.add_extension('_tron',
+                         sources=tron_sources,
+                         libraries=blas_info.pop('libraries', ['blas']),
+                         include_dirs=['src',
+                                       numpy.get_include(),
+                                       blas_info.pop('include_dirs', [])],
+                         depends=liblinear_depends,
+                         # extra_compile_args=['-O0 -fno-inline'],
+                         **blas_info)
+
 
     # this should go *after* libsvm-skl
     libsvm_sparse_sources = ['libsvm_sparse.c']
