@@ -67,12 +67,12 @@ def configuration(parent_package='', top_path=None):
     ## end liblinear module
 
     ### The tron solver of liblinear
-    tron_sources = ['_tron.cpp',
+    tron_sources = ['_tron_fast.cpp',
                     join('src', 'liblinear', 'tron_helper.cpp'),
                     join('src', 'liblinear', 'tron.cpp')]
     blas_info_cpp = blas_info.copy()
     blas_info_cpp['language'] = 'cpp'
-    config.add_extension('_tron',
+    config.add_extension('_tron_fast',
                          sources=tron_sources,
                          libraries=blas_info.pop('libraries', ['blas']),
                          include_dirs=['src/liblinear/',

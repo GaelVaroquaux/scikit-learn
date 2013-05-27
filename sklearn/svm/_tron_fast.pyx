@@ -71,7 +71,7 @@ cdef void c_hess(double *s, void *hess_py, double *b, int nr_variable,
     b0[:] = out[:]
 
 
-def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
+def _fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
               gtol=1e-3):
     """minimize func using Trust Region Newton algorithm
 
@@ -87,6 +87,9 @@ def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
     gtol: float
         stopping criterion. Gradient norm must be less than gtol
         before succesful termination.
+    check_inputs: boolean, optional
+        If check_inputs is True, basic checks are performed on inputs.
+        Set check_inputs to false only if you know what you are doing
 
     Returns
     -------
