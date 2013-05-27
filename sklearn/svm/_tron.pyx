@@ -7,7 +7,6 @@ This file must be compiled with "cython --cplus"
 
 from cython cimport view
 import numpy as np
-from scipy import optimize
 cimport numpy as np
 from libc cimport string
 from cpython cimport Py_INCREF, Py_XDECREF, PyObject
@@ -57,6 +56,7 @@ cdef void c_grad(double *w, void *grad_hess_py, void **hess_py,
     hess_py[0] = <void *> hess
 
 
+cdef void c_hess(double *s, void *hess_py, double *b, int nr_variable,
                  void *py_args):
     cdef view.array b0 = view.array(shape=(nr_variable,),
         itemsize=sizeof(double), format='d',
@@ -90,11 +90,10 @@ def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
 
     Returns
     -------
-    res : scipy.optimize.Result
-        The optimization result represented as a scipy.optimize.Result object.
-        Important attributes are: ``x`` the solution array, ``success`` a
-        boolean flag indicating if the optimizer exited successfully,
-        ``nit`` an integer for the number of iterations performed
+    x0 : array
+        The minimizer
+    res : dict
+        A dictionary giving more details on the optimization
     """
 
     cdef np.ndarray[np.float64_t, ndim=1] x0_np
@@ -115,11 +114,10 @@ def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
     cdef TRON *solver = new TRON(fc, c_tol, c_gtol, c_max_iter)
     solver.tron_with_grad(<double *> x0_np.data, <double *>grad.data)
     success = solver.gnorm < gtol
-    result = optimize.Result(
-        x=x0_np, success=success, nit=solver.n_iter, gnorm=solver.gnorm,
+    result = dict(success=success, nit=solver.n_iter, gnorm=solver.gnorm,
         fun=solver.fun, jac=grad)
 
     del fc
     del solver
 
-    return result
+    return x0_np, result
