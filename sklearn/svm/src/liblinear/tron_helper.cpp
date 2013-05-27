@@ -25,8 +25,3 @@ int func_callback::get_nr_variable(void)
 	return nr_variable;
 }
 
-void func_callback::callback(double *w)
-{
-    if (this->py_callback != NULL)
-        c_callback(w, this->py_callback, this->nr_variable, this->py_args);
-}

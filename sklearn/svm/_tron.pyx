@@ -19,13 +19,13 @@ cdef extern from "tron_helper.h":
     ctypedef void (*hess_cb)(double *, void *, double *, int, void *)
     cdef cppclass func_callback:
         func_callback(double *, void *, func_cb,
-            void *, grad_cb, hess_cb, void *, func_cb, int nr_variable, void *)
+            void *, grad_cb, hess_cb, int nr_variable, void *)
 
 
 cdef extern from "tron.h":
     cdef cppclass TRON:
         TRON(func_callback *, double, double, int)
-        void tron(double *, double *)
+        void tron_with_grad(double *, double *)
         int n_iter
         double gnorm
         double fun
@@ -57,7 +57,6 @@ cdef void c_grad(double *w, void *grad_hess_py, void **hess_py,
     hess_py[0] = <void *> hess
 
 
-cdef void c_hess(double *s, void *hess_py, double *b, int nr_variable,
                  void *py_args):
     cdef view.array b0 = view.array(shape=(nr_variable,),
         itemsize=sizeof(double), format='d',
@@ -72,18 +71,8 @@ cdef void c_hess(double *s, void *hess_py, double *b, int nr_variable,
     b0[:] = out[:]
 
 
-cdef double c_callback(double *w, void *py_callback, int nr_variable,
-                     void *py_args):
-
-    cdef view.array w0 = view.array(shape=(nr_variable,), itemsize=sizeof(double),
-        mode='c', format='d', allocate_buffer=False)
-    w0.data = <char *> w
-    (<object> py_callback)(np.asarray(w0))
-    return 0.
-
-
-def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6, gtol=1e-3,
-             callback=None):
+def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
+              gtol=1e-3):
     """minimize func using Trust Region Newton algorithm
 
     Parameters
@@ -114,23 +103,17 @@ def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6, gtol=1e-3,
     cdef double c_gtol = gtol
     cdef double c_tol = tol
     cdef int c_max_iter = max_iter
-    cdef void *py_callback
-    cur_w = None
     x0_np = np.asarray(x0, dtype=np.float64)
     grad = np.empty(x0_np.size, dtype=np.float64)
-    if callback is None:
-        py_callback = NULL
-    else:
-        py_callback = <void *> callback
 
     cdef func_callback * fc = new func_callback(
         <double *> x0_np.data,
         <void *> func, c_func,
         <void *> grad_hess, c_grad,
-        c_hess, py_callback, c_callback, nr_variable, <void *> args)
+        c_hess, nr_variable, <void *> args)
 
     cdef TRON *solver = new TRON(fc, c_tol, c_gtol, c_max_iter)
-    solver.tron(<double *> x0_np.data, <double *>grad.data)
+    solver.tron_with_grad(<double *> x0_np.data, <double *>grad.data)
     success = solver.gnorm < gtol
     result = optimize.Result(
         x=x0_np, success=success, nit=solver.n_iter, gnorm=solver.gnorm,

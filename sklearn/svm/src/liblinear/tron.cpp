@@ -56,8 +56,26 @@ TRON::~TRON()
 {
 }
 
-void TRON::tron(double *w, double *g)
+void TRON::tron(double *w)
 {
+	// Backward compatible (for liblinear) version of the
+	// tron method
+	int n = fun_obj->get_nr_variable();
+	double *g = new double[n];
+	int i;
+	
+	for (i=0; i<n; i++)
+		w[i] = 0;
+	return this->tron_with_grad(w, g);
+}
+
+
+void TRON::tron_with_grad(double *w, double *g)
+{
+	// Our own version of the 'tron' method of TRON, to be able to
+	// control the gradient. This differs from the original tron
+	// method as it takes a g array to hold the gradient
+
 	// Parameters for updating the iterates.
 	double eta0 = 1e-4, eta1 = 0.25, eta2 = 0.75;
 
@@ -65,7 +83,7 @@ void TRON::tron(double *w, double *g)
 	double sigma1 = 0.25, sigma2 = 0.5, sigma3 = 4;
 
 	int n = fun_obj->get_nr_variable();
-	int i, cg_iter;
+	int cg_iter;
 	double delta, snorm, one=1.0;
 	double alpha, f, fnew, prered, actred, gs;
 	int search = 1, iter = 1, inc = 1;
@@ -137,7 +155,6 @@ void TRON::tron(double *w, double *g)
 			if (gnorm <= gtol)
 				break;
 		}
-		fun_obj->callback(w);
 
 		if (f < -1.0e+32)
 		{
