@@ -12,6 +12,7 @@ cimport numpy as np
 from libc cimport string
 from cpython cimport Py_INCREF, Py_XDECREF, PyObject
 
+
 cdef extern from "tron_helper.h":
     ctypedef double (*func_cb)(double *, void *, int, void *)
     ctypedef void (*grad_cb)(double *, void *, void **, double *, int, void *)
@@ -81,7 +82,7 @@ cdef double c_callback(double *w, void *py_callback, int nr_variable,
     return 0.
 
 
-def minimize(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6, gtol=1e-3,
+def fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6, gtol=1e-3,
              callback=None):
     """minimize func using Trust Region Newton algorithm
 
