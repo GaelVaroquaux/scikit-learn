@@ -180,9 +180,11 @@ def _logistic_grad_hess(w, X, y, alpha):
 
     # The mat-vec product of the Hessian
     d = z * (1 - z)
+    # Precompute as much as possible
+    d = np.sqrt(d, d)
+    dX = d[:, np.newaxis] * X
     def Hs(s):
-        wa = d * X.dot(s)
-        return X.T.dot(wa) + alpha * s
+        return dX.T.dot(dX.dot(s)) + alpha * s
     return grad, Hs
 
 
@@ -236,7 +238,11 @@ def logistic_regression(X, y, C=1., w0=None, max_iter=15, gtol=1e-3,
                                      args=(X, y, 1./C), iprint=verbose > 0)
         return out[0]
     else:
-        w, res = fmin_tron(_logistic_loss, _logistic_grad_hess, w0,
+        # Bypass the checks
+        from ..svm._tron_fast import _fmin_tron
+        # Use a very small starting point, to be in the trust region
+        w0 /= n_features
+        w, res = _fmin_tron(_logistic_loss, _logistic_grad_hess, w0,
                         args=(X, y, 1./C), max_iter=max_iter, gtol=gtol,
                         tol=tol)
     return w
