@@ -68,7 +68,7 @@ def configuration(parent_package='', top_path=None):
 
     ### The tron solver of liblinear
     tron_sources = ['_tron_fast.cpp',
-                    join('src', 'liblinear', 'tron_helper.cpp'),
+                    join('src', 'tron_helper.cpp'),
                     join('src', 'liblinear', 'tron.cpp')]
     blas_info_cpp = blas_info.copy()
     blas_info_cpp['language'] = 'cpp'
@@ -76,6 +76,7 @@ def configuration(parent_package='', top_path=None):
                          sources=tron_sources,
                          libraries=blas_info.pop('libraries', ['blas']),
                          include_dirs=['src/liblinear/',
+                                       'src/',
                                        numpy.get_include(),
                                        blas_info.pop('include_dirs', [])],
                          depends=liblinear_depends,

@@ -1,3 +1,6 @@
+
+// Adaptation code to make the tron solver usable from Python
+// Authors: F Pedregosa, G Varoquaux
 #include "tron_helper.h"
 #include <string.h>
 #include <stdio.h>

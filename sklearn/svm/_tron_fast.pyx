@@ -72,7 +72,7 @@ cdef void c_hess(double *s, void *hess_py, double *b, int nr_variable,
 
 
 def _fmin_tron(func, grad_hess, x0, args=(), max_iter=500, tol=1e-6,
-              gtol=1e-3):
+               gtol=1e-3):
     """minimize func using Trust Region Newton algorithm
 
     Parameters

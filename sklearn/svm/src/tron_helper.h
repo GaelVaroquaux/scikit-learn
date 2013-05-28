@@ -1,4 +1,5 @@
-// Code to make the tron solver usable from Python
+// Adaptation code to make the tron solver usable from Python
+// Authors: F Pedregosa, G Varoquaux
 #include "tron.h"
 
 typedef double (*func_cb)(double *, void *, int, void *);

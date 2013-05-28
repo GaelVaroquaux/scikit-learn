@@ -1,8 +1,10 @@
 import numpy as np
+from scipy import optimize
 
 from .base import LinearClassifierMixin, SparseCoefMixin
 from ..feature_selection.from_model import _LearntSelectorMixin
 from ..svm.base import BaseLibLinear
+from ..svm._tron import fmin_tron
 
 
 class LogisticRegression(BaseLibLinear, LinearClassifierMixin,
@@ -139,3 +141,105 @@ class LogisticRegression(BaseLibLinear, LinearClassifierMixin,
             model, where classes are ordered as they are in ``self.classes_``.
         """
         return np.log(self.predict_proba(X))
+
+
+###############################################################################
+# Solver based directly on the TRON optimizer
+
+
+def _phi(t, copy=True):
+    # helper function: return 1. / (1 + np.exp(-t))
+    if copy:
+        t = np.copy(t)
+    t *= -1.
+    t = np.exp(t, t)
+    t += 1
+    t = np.reciprocal(t, t)
+    return t
+
+
+def _logistic_loss(w, X, y, alpha):
+    # loss function to be optimized, it's the logistic loss
+    z = X.dot(w)
+    yz = y * z
+    idx = yz > 0
+    out = np.empty(yz.shape, yz.dtype)
+    out[idx] = np.log(1 + np.exp(-yz[idx]))
+    out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
+    out = out.sum() + .5 * alpha * w.dot(w)
+    print 'Logistic value: %f (norm of input %f)' % (out, np.sum(w**2))
+    return out
+
+
+def _logistic_grad_hess(w, X, y, alpha):
+    # gradient of the logistic loss
+    z = X.dot(w)
+    z = _phi(y * z, copy=False)
+    z0 = (z - 1) * y
+    grad = X.T.dot(z0) + alpha * w
+
+    # The mat-vec product of the Hessian
+    d = z * (1 - z)
+    def Hs(s):
+        wa = d * X.dot(s)
+        return X.T.dot(wa) + alpha * s
+    return grad, Hs
+
+
+def _logistic_grad(w, X, y, alpha):
+    # gradient of the logistic loss
+    z = X.dot(w)
+    z = _phi(y * z, copy=False)
+    z0 = (z - 1) * y
+    grad = X.T.dot(z0) + alpha * w
+    return grad
+
+
+def _logistic_loss_and_grad(w, X, y, alpha):
+    # gradient of the logistic loss
+    z = X.dot(w)
+    yz = y * z
+    idx = yz > 0
+    out = np.empty(yz.shape, yz.dtype)
+    out[idx] = np.log(1 + np.exp(-yz[idx]))
+    out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
+    out = out.sum() + .5 * alpha * w.dot(w)
+
+    z = _phi(yz, copy=False)
+    z0 = (z - 1) * y
+    grad = X.T.dot(z0) + alpha * w
+    return out, grad
+
+from .base import center_data
+
+def logistic_regression(X, y, C=1., w0=None, max_iter=15, gtol=1e-3,
+                        tol=1e-12, solver='lbfgs', verbose=0):
+    # Convert y to [-1, 1] values
+    assert len(np.unique(y)) == 2
+    y = y - y.min()
+    y = np.sign(y)
+    y = y.astype(np.float)
+    X, _, _, _, _ = center_data(X, y, fit_intercept=True,
+                                normalize=False)
+    if w0 is None:
+        n_samples, n_features = X.shape
+        w0 = np.ones(n_features)
+        # We don't want sum(w0) too big, because it leads to exploring
+        # parts of the logistic loss where it is flat, and thus hard to
+        # optimize
+        w0 /= n_features
+    if solver == 'lbfgs':
+        #out = optimize.fmin_l_bfgs_b(_logistic_loss_and_grad, w0,
+        #                             args=(X, y, 1./C), iprint=verbose > 0)
+        out = optimize.fmin_l_bfgs_b(_logistic_loss, w0,
+                                     fprime=_logistic_grad,
+                                     args=(X, y, 1./C), iprint=verbose > 0)
+        return out[0]
+    else:
+        w, res = fmin_tron(_logistic_loss, _logistic_grad_hess, w0,
+                        args=(X, y, 1./C), max_iter=max_iter, gtol=gtol,
+                        tol=tol)
+    return w
+
+
+
