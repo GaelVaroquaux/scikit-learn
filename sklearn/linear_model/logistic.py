@@ -1,3 +1,5 @@
+import numbers
+
 import numpy as np
 from scipy import optimize
 
@@ -157,7 +159,7 @@ def _phi(t, copy=True):
     return t
 
 
-def _logistic_loss(w, X, y, alpha, verbose=True):
+def _logistic_loss(w, X, y, alpha):
     # loss function to be optimized, it's the logistic loss
     z = X.dot(w)
     yz = y * z
@@ -166,8 +168,6 @@ def _logistic_loss(w, X, y, alpha, verbose=True):
     out[idx] = np.log(1 + np.exp(-yz[idx]))
     out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
     out = out.sum() + .5 * alpha * w.dot(w)
-    #if verbose:
-    #    print 'Logistic value: %f (norm of input %f)' % (out, np.sum(w**2))
     return out
 
 
@@ -250,6 +250,7 @@ def logistic_regression(X, y, C=1., w0=None, max_iter=100, gtol=1e-4,
     X, _, _, _, _ = center_data(X, y, fit_intercept=True,
                                 normalize=False)
     w0 = _init_logistic(X, y, w0=w0, C=C)
+    #w0 = np.zeros(X.shape[1])
     if solver == 'lbfgs':
         # A large limited memory: our function is very expensive to
         # compute, so we might as well use quite a few memory steps
@@ -268,4 +269,17 @@ def logistic_regression(X, y, C=1., w0=None, max_iter=100, gtol=1e-4,
     return w
 
 
+def logistic_regression_path(X, y, Cs=10, max_iter=100, gtol=1e-4,
+                        tol=1e-12, solver='lbfgs', verbose=0):
+    if isinstance(Cs, numbers.Integral):
+        Cs = np.logspace(-100, 100, Cs)
+    Cs = np.sort(Cs)[::-1]
+    w0 = None
+    coefs = list()
+    for C in Cs:
+        w0 = logistic_regression(X, y, C, w0=w0, max_iter=max_iter,
+                                 gtol=gtol, tol=tol, solver=solver,
+                                 verbose=verbose)
+        coefs.append(w0)
+    return coefs, Cs
 
