@@ -4,7 +4,6 @@ from scipy import optimize
 from .base import LinearClassifierMixin, SparseCoefMixin
 from ..feature_selection.from_model import _LearntSelectorMixin
 from ..svm.base import BaseLibLinear
-from ..svm._tron import fmin_tron
 
 
 class LogisticRegression(BaseLibLinear, LinearClassifierMixin,
@@ -158,7 +157,7 @@ def _phi(t, copy=True):
     return t
 
 
-def _logistic_loss(w, X, y, alpha):
+def _logistic_loss(w, X, y, alpha, verbose=True):
     # loss function to be optimized, it's the logistic loss
     z = X.dot(w)
     yz = y * z
@@ -167,7 +166,8 @@ def _logistic_loss(w, X, y, alpha):
     out[idx] = np.log(1 + np.exp(-yz[idx]))
     out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
     out = out.sum() + .5 * alpha * w.dot(w)
-    print 'Logistic value: %f (norm of input %f)' % (out, np.sum(w**2))
+    #if verbose:
+    #    print 'Logistic value: %f (norm of input %f)' % (out, np.sum(w**2))
     return out
 
 
@@ -192,13 +192,15 @@ def _logistic_grad(w, X, y, alpha):
     # gradient of the logistic loss
     z = X.dot(w)
     z = _phi(y * z, copy=False)
-    z0 = (z - 1) * y
-    grad = X.T.dot(z0) + alpha * w
+    z = (z - 1) * y
+    grad = X.T.dot(z)
+    grad += alpha * w
+    #print 'Logistic grad: %f (norm of input %f)' % (np.sum(grad**2), np.sum(w**2))
     return grad
 
 
 def _logistic_loss_and_grad(w, X, y, alpha):
-    # gradient of the logistic loss
+    # the logistic loss and its gradient
     z = X.dot(w)
     yz = y * z
     idx = yz > 0
@@ -212,36 +214,54 @@ def _logistic_loss_and_grad(w, X, y, alpha):
     grad = X.T.dot(z0) + alpha * w
     return out, grad
 
+
+def _init_logistic(X, y, w0=None, C=1.):
+    """ Good initialization heurisitic for the logistic_regression"""
+    assert np.allclose(np.unique(y), [-1, 1])
+    if w0 is None:
+        w0 = X.T.dot(y)
+    else:
+        w0 = w0.copy()
+    # Now do a line-search to find the proper scaling
+    # We don't call the _logistic_loss function, because we can simplify
+    # things, given that we are only playing with a scaling factor
+    z = X.dot(w0)
+    yz = y * z
+    idx = yz > 0
+    out = np.empty(yz.shape, yz.dtype)
+    def _cost(l):
+        lyz = l * yz
+        out[idx] = np.log(1 + np.exp(-lyz[idx]))
+        out[~idx] = (-lyz[~idx] + np.log(1 + np.exp(lyz[~idx])))
+        return out.sum() + .5 * l**2 / C * w0.dot(w0)
+    l = optimize.brent(_cost, maxiter=5)
+    w0 *= l
+    return w0
+
 from .base import center_data
 
-def logistic_regression(X, y, C=1., w0=None, max_iter=15, gtol=1e-3,
+def logistic_regression(X, y, C=1., w0=None, max_iter=100, gtol=1e-4,
                         tol=1e-12, solver='lbfgs', verbose=0):
     # Convert y to [-1, 1] values
     assert len(np.unique(y)) == 2
-    y = y - y.min()
+    y = y - y.mean()
     y = np.sign(y)
     y = y.astype(np.float)
     X, _, _, _, _ = center_data(X, y, fit_intercept=True,
                                 normalize=False)
-    if w0 is None:
-        n_samples, n_features = X.shape
-        w0 = np.ones(n_features)
-        # We don't want sum(w0) too big, because it leads to exploring
-        # parts of the logistic loss where it is flat, and thus hard to
-        # optimize
-        w0 /= n_features
+    w0 = _init_logistic(X, y, w0=w0, C=C)
     if solver == 'lbfgs':
-        #out = optimize.fmin_l_bfgs_b(_logistic_loss_and_grad, w0,
-        #                             args=(X, y, 1./C), iprint=verbose > 0)
-        out = optimize.fmin_l_bfgs_b(_logistic_loss, w0,
-                                     fprime=_logistic_grad,
-                                     args=(X, y, 1./C), iprint=verbose > 0)
+        # A large limited memory: our function is very expensive to
+        # compute, so we might as well use quite a few memory steps
+        out = optimize.fmin_l_bfgs_b(_logistic_loss_and_grad, w0,
+                                     fprime=None,
+                                     args=(X, y, 1./C), iprint=verbose > 0,
+                                     m=20,
+                                     pgtol=.1*gtol)
         return out[0]
     else:
         # Bypass the checks
         from ..svm._tron_fast import _fmin_tron
-        # Use a very small starting point, to be in the trust region
-        w0 /= n_features
         w, res = _fmin_tron(_logistic_loss, _logistic_grad_hess, w0,
                         args=(X, y, 1./C), max_iter=max_iter, gtol=gtol,
                         tol=tol)
