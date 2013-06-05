@@ -215,7 +215,7 @@ def _logistic_loss_grad_hess(w, X, y, alpha):
     dX = d[:, np.newaxis] * X
     def Hs(s):
         return dX.T.dot(dX.dot(s)) + alpha * s
-    print 'Loss/grad/hess %r, %r' % (out, grad.dot(grad))
+    #print 'Loss/grad/hess %r, %r' % (out, grad.dot(grad))
     return out, grad, Hs
 
 
@@ -253,7 +253,7 @@ def _logistic_loss_intercept(w_c, X, y, alpha):
     out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
     out = out.sum() + .5 * alpha * w.dot(w)
 
-    print 'Loss %r' % out
+    #print 'Loss %r' % out
     return out
 
 
