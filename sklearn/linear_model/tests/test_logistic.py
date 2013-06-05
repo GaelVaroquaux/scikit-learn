@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sp
+from scipy import optimize
 
 from sklearn.utils.testing import assert_array_equal
 from sklearn.utils.testing import assert_array_almost_equal
@@ -155,3 +156,33 @@ def test_liblinear_random_state():
     lr2 = logistic.LogisticRegression(random_state=0)
     lr2.fit(X, y)
     assert_array_almost_equal(lr1.coef_, lr2.coef_)
+
+
+def test__logistic_loss_and_grad():
+    X, y = datasets.make_classification(n_samples=20)
+    n_features = X.shape[1]
+    w = np.zeros(n_features)
+
+    # First check that our derivation of the grad is correct
+    loss, grad = logistic._logistic_loss_and_grad(w, X, y, alpha=1.)
+    approx_grad = optimize.approx_fprime(w,
+                        lambda w: logistic._logistic_loss_and_grad(w, X, y,
+                                                        alpha=1.)[0],
+                        1e-3
+                        )
+    np.testing.assert_array_almost_equal(grad, approx_grad, decimal=2)
+
+    # Second check that our intercept implementation is good
+    w = np.zeros(n_features + 1)
+    loss_interp, grad_interp =logistic._logistic_loss_and_grad_intercept(w,
+                                                X, y, alpha=1.)
+    np.testing.assert_allclose(loss, loss_interp)
+
+    approx_grad = optimize.approx_fprime(w,
+                        lambda w:
+                        logistic._logistic_loss_and_grad_intercept(w, X, y,
+                                                        alpha=1.)[0],
+                        1e-3
+                        )
+    np.testing.assert_array_almost_equal(grad_interp, approx_grad, decimal=2)
+
