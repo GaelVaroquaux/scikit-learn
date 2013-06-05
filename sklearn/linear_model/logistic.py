@@ -12,6 +12,7 @@ from ..metrics import SCORERS
 from ..externals.joblib import Parallel, delayed
 from ..externals import six
 
+from .optimize import newton_cg
 
 class LogisticRegression(BaseLibLinear, LinearClassifierMixin,
                          _LearntSelectorMixin, SparseCoefMixin):
@@ -164,7 +165,7 @@ def _phi(t, copy=True):
     return t
 
 
-def _logistic_loss_and_grad(w, X, y, alpha, fit_intercept=False):
+def _logistic_loss_and_grad(w, X, y, alpha):
     # the logistic loss and its gradient
     z = X.dot(w)
     yz = y * z
@@ -178,6 +179,44 @@ def _logistic_loss_and_grad(w, X, y, alpha, fit_intercept=False):
     z0 = (z - 1) * y
     grad = X.T.dot(z0) + alpha * w
     return out, grad
+
+
+def _logistic_loss(w, X, y, alpha):
+    # the logistic loss and
+    z = X.dot(w)
+    yz = y * z
+    out = np.empty(yz.shape, yz.dtype)
+    idx = yz > 0
+    out[idx] = np.log(1 + np.exp(-yz[idx]))
+    out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
+    out = out.sum() + .5 * alpha * w.dot(w)
+    #print 'Loss %r' % out
+    return out
+
+
+def _logistic_loss_grad_hess(w, X, y, alpha):
+    # the logistic loss, its gradient, and the matvec application of the
+    # Hessian
+    z = X.dot(w)
+    yz = y * z
+    out = np.empty(yz.shape, yz.dtype)
+    idx = yz > 0
+    out[idx] = np.log(1 + np.exp(-yz[idx]))
+    out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
+    out = out.sum() + .5 * alpha * w.dot(w)
+
+    z = _phi(yz, copy=False)
+    z0 = (z - 1) * y
+    grad = X.T.dot(z0) + alpha * w
+    # The mat-vec product of the Hessian
+    d = z * (1 - z)
+    # Precompute as much as possible
+    d = np.sqrt(d, d)
+    dX = d[:, np.newaxis] * X
+    def Hs(s):
+        return dX.T.dot(dX.dot(s)) + alpha * s
+    print 'Loss/grad/hess %r, %r' % (out, grad.dot(grad))
+    return out, grad, Hs
 
 
 def _logistic_loss_and_grad_intercept(w_c, X, y, alpha):
@@ -201,6 +240,58 @@ def _logistic_loss_and_grad_intercept(w_c, X, y, alpha):
     return out, grad
 
 
+def _logistic_loss_intercept(w_c, X, y, alpha):
+    w = w_c[:-1]
+    c = w_c[-1]
+
+    z = X.dot(w)
+    z += c
+    yz = y * z
+    out = np.empty(yz.shape, yz.dtype)
+    idx = yz > 0
+    out[idx] = np.log(1 + np.exp(-yz[idx]))
+    out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
+    out = out.sum() + .5 * alpha * w.dot(w)
+
+    print 'Loss %r' % out
+    return out
+
+
+def _logistic_loss_grad_hess_intercept(w_c, X, y, alpha):
+    w = w_c[:-1]
+    c = w_c[-1]
+
+    z = X.dot(w)
+    z += c
+    yz = y * z
+    out = np.empty(yz.shape, yz.dtype)
+    idx = yz > 0
+    out[idx] = np.log(1 + np.exp(-yz[idx]))
+    out[~idx] = (-yz[~idx] + np.log(1 + np.exp(yz[~idx])))
+    out = out.sum() + .5 * alpha * w.dot(w)
+
+    z = _phi(yz, copy=False)
+    z0 = (z - 1) * y
+    grad = np.empty_like(w_c)
+    grad[:-1] = X.T.dot(z0) + alpha * w
+    z0_sum = z0.sum()
+    grad[-1] = z0_sum
+    # The mat-vec product of the Hessian
+    d = z * (1 - z)
+    # Precompute as much as possible
+    d = np.sqrt(d, d)
+    dX = d[:, np.newaxis] * X
+    def Hs(s):
+        ret = np.empty_like(s)
+        ret[:-1] = dX.T.dot(dX.dot(s[:-1])) + alpha * s[:-1]
+        # XXX: this is probably False
+        ret[-1] = z0_sum * s[-1]
+        return ret
+    #print 'Loss/grad/hess %r, %r' % (out, grad.dot(grad))
+    return out, grad, Hs
+
+
+
 def logistic_regression(X, y, C=1., fit_intercept=False, w0=None,
                         max_iter=100, gtol=1e-4, tol=1e-4, verbose=0,
                         ):
@@ -210,19 +301,29 @@ def logistic_regression(X, y, C=1., fit_intercept=False, w0=None,
     y = np.sign(y)
     y = y.astype(np.float)
 
+    if fit_intercept:
+        if w0 is None:
+            w0 = np.zeros(X.shape[1] + 1)
+        func_grad_hess = _logistic_loss_grad_hess_intercept
+        func = _logistic_loss_intercept
+    else:
+        if w0 is None:
+            w0 = np.zeros(X.shape[1])
+        func_grad_hess = _logistic_loss_grad_hess
+        func = _logistic_loss
+
     # A large limited memory: our function is very expensive to
     # compute, so we might as well use quite a few memory steps
-    if fit_intercept:
-        w0 = np.zeros(X.shape[1] + 1)
-        func = _logistic_loss_and_grad_intercept
+    if 0:
+        out = optimize.fmin_l_bfgs_b(func, w0,
+                                        fprime=None,
+                                        args=(X, y, 1./C),
+                                        iprint=verbose > 0,
+                                        m=20, pgtol=gtol)
+        out = out[0]
     else:
-        w0 = np.zeros(X.shape[1])
-        func = _logistic_loss_and_grad
-    out = optimize.fmin_l_bfgs_b(func, w0,
-                                    fprime=None,
-                                    args=(X, y, 1./C), iprint=verbose > 0,
-                                    m=20, pgtol=gtol)
-    return out[0]
+        out = newton_cg(func_grad_hess, func, w0, args=(X, y, 1./C),)
+    return out
 
 
 def logistic_regression_path(X, y, Cs=10, fit_intercept=False, max_iter=100,
@@ -389,6 +490,7 @@ class LogisticRegressionCV(LinearClassifierMixin, _LearntSelectorMixin):
             self.coef_ = w[np.newaxis, :]
             self.intercept_ = 0
         return self
+
     @property
     def classes_(self):
         return self._enc.classes_
