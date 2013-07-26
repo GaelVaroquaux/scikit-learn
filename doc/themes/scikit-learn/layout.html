@@ -14,10 +14,6 @@
 #}
 {% extends "basic/layout.html" %}
 
-{% if theme_collapsiblesidebar|tobool %}
-{% set script_files = script_files + ['_static/sidebar.js'] %}
-{% endif %}
-
 {% block htmltitle %}
 {{ super() }}
 <!-- htmltitle is before nature.css - we use this hack to load bootstrap first -->
@@ -235,6 +231,9 @@ index -->
     {%- endfor %}
     {% endif %}
      </div>
+     {% if theme_collapsiblesidebar|tobool %}
+         <script type="text/javascript" src="_static/sidebar.js"></script>
+     {% endif %}
      <script type="text/javascript">
        $("div.buttonNext, div.buttonPrevious").hover(
            function () {
