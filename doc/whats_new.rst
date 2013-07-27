@@ -160,6 +160,7 @@ Changelog
      :func:`sklearn.datasets.make_checkerboard`), and scoring metrics
      (:func:`sklearn.metrics.consensus_score`). By `Kemal Eren`_.
 
+<<<<<<< HEAD
    - New OrthogonalMatchingPursuitCV class by `Alexandre Gramfort`_
      and `Vlad Niculae`_.
 
@@ -185,7 +186,8 @@ Changelog
      :class:`neighbors.RadiusNeighbors,Classifier`support multioutput data
      by `Arnaud Joly`_.
 
-
+   - Significant speed improvements for :class:`sklearn.cluster.DBSCAN`_
+     by `cleverless <https://github.com/cleverless>`_
 
 
 API changes summary
