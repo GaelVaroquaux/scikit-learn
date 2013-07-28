@@ -193,10 +193,10 @@ cdef struct NodeData_t:
 
 cdef Py_ssize_t offset_idx_start, offset_idx_end, offset_is_leaf, \
         offset_radius
-offset_idx_start = <Py_ssize_t>&(<NodeData_t*>NULL).idx_start
-offset_idx_end = <Py_ssize_t>&(<NodeData_t*>NULL).idx_end
-offset_is_leaf = <Py_ssize_t>&(<NodeData_t*>NULL).is_leaf
-offset_radius = <Py_ssize_t>&(<NodeData_t*>NULL).radius
+offset_idx_start = <np.intp_t>&(<NodeData_t*>NULL).idx_start
+offset_idx_end = <np.intp_t>&(<NodeData_t*>NULL).idx_end
+offset_is_leaf = <np.intp_t>&(<NodeData_t*>NULL).is_leaf
+offset_radius = <np.intp_t>&(<NodeData_t*>NULL).radius
 
 NodeData = np.dtype({'names': ['idx_start', 'idx_end'],
                      'formats': [ITYPE, ITYPE, ITYPE, DTYPE],
