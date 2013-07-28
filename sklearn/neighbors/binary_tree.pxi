@@ -183,12 +183,28 @@ cdef struct NodeData_t:
     ITYPE_t idx_end
     ITYPE_t is_leaf
     DTYPE_t radius
-NodeData = np.dtype([('idx_start', ITYPE), ('idx_end', ITYPE),
-                     ('is_leaf', ITYPE), ('radius', DTYPE)])
 
+# Re-enable the following line after we raise the numpy dependency
+#NodeData = np.dtype([('idx_start', ITYPE), ('idx_end', ITYPE),
+#                     ('is_leaf', ITYPE), ('radius', DTYPE)])
 
 ######################################################################
 # Numpy 1.3-1.4 compatibility utilities
+
+cdef Py_ssize_t offset_idx_start, offset_idx_end, offset_is_leaf, \
+        offset_radius
+offset_idx_start = <Py_ssize_t>&(<NodeData_t*>NULL).idx_start
+offset_idx_end = <Py_ssize_t>&(<NodeData_t*>NULL).idx_end
+offset_is_leaf = <Py_ssize_t>&(<NodeData_t*>NULL).is_leaf
+offset_radius = <Py_ssize_t>&(<NodeData_t*>NULL).radius
+
+NodeData = np.dtype({'names': ['idx_start', 'idx_end'],
+                     'formats': [ITYPE, ITYPE, ITYPE, DTYPE],
+                     'offsets': [0, offset_idx_end - offset_idx_start,
+                                 offset_is_leaf - offset_idx_start,
+                                 offset_radius - offset_idx_start],
+                     'itemsize': sizeof(NodeData_t)})
+
 cdef DTYPE_t[::1] get_memview_DTYPE_1D(
                                np.ndarray[DTYPE_t, ndim=1, mode='c'] X):
     return <DTYPE_t[:X.shape[0]:1]> (<DTYPE_t*> X.data)
