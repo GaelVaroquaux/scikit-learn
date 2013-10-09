@@ -264,17 +264,23 @@ class GraphLasso(EmpiricalCovariance):
     """
 
     def __init__(self, alpha=.01, mode='cd', tol=1e-4, max_iter=100,
-                 verbose=False):
+                 verbose=False, assume_centered=False):
         self.alpha = alpha
         self.mode = mode
         self.tol = tol
         self.max_iter = max_iter
         self.verbose = verbose
+        self.assume_centered = assume_centered
         # The base class needs this for the score method
         self.store_precision = True
 
     def fit(self, X, y=None):
-        emp_cov = empirical_covariance(X)
+        if self.assume_centered:
+            self.location_ = np.zeros(X.shape[1])
+        else:
+            self.location_ = X.mean(0)
+        emp_cov = empirical_covariance(
+            X, assume_centered=self.assume_centered)
         self.covariance_, self.precision_ = graph_lasso(
             emp_cov, alpha=self.alpha, mode=self.mode, tol=self.tol,
             max_iter=self.max_iter, verbose=self.verbose,)
@@ -443,7 +449,7 @@ class GraphLassoCV(GraphLasso):
     """
 
     def __init__(self, alphas=4, n_refinements=4, cv=None, tol=1e-4,
-                 max_iter=100, mode='cd', n_jobs=1, verbose=False):
+                 max_iter=100, mode='cd', n_jobs=1, verbose=False, assume_centered=False):
         self.alphas = alphas
         self.n_refinements = n_refinements
         self.mode = mode
@@ -452,12 +458,18 @@ class GraphLassoCV(GraphLasso):
         self.verbose = verbose
         self.cv = cv
         self.n_jobs = n_jobs
+        self.assume_centered = assume_centered
         # The base class needs this for the score method
         self.store_precision = True
 
     def fit(self, X, y=None):
         X = np.asarray(X)
-        emp_cov = empirical_covariance(X)
+        if self.assume_centered:
+            self.location_ = np.zeros(X.shape[1])
+        else:
+            self.location_ = X.mean(0)
+        emp_cov = empirical_covariance(
+            X, assume_centered=self.assume_centered)
 
         cv = check_cv(self.cv, X, y, classifier=False)
 

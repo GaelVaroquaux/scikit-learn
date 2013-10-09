@@ -39,6 +39,7 @@ def test_graph_lasso(random_state=0):
 
     # Smoke test the estimator
     model = GraphLasso(alpha=.1).fit(X)
+    model.score(X)
     assert_array_almost_equal(model.covariance_, covs['cd'])
 
 
