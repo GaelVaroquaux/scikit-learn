@@ -881,19 +881,34 @@ def _mini_batch_step(X, x_squared_norms, centers, counts,
         # Reassign clusters that have very low counts
         to_reassign = counts <= reassignment_ratio * counts.max()
         # maximally assign reassignment_ratio*batch_size samples as clusters
-        if to_reassign.sum() > .5 * X.shape[0]:
-            indices_dont_reassign = np.argsort(counts)[.5 * X.shape[0]:]
+        n_samples = X.shape[0]
+        if to_reassign.sum() > .5 * n_samples:
+            indices_dont_reassign = np.argsort(counts)[.5 * n_samples:]
             to_reassign[indices_dont_reassign] = False
         n_reassigns = to_reassign.sum()
         if n_reassigns:
             # Pick new clusters amongst observations with probability
             # proportional to their closeness to their center.
             # Flip the ordering of the distances.
-            distances += 1e-10
-            distances /= distances.sum()
-
-            new_centers = choice(X.shape[0], replace=False, p=distances,
-                                 size=n_reassigns)
+            non_zero_dist = distances[distances !=0]
+            non_zero_dist.sort()
+            assignment_proba = np.abs(distances
+                                - non_zero_dist[int(.1 * len(non_zero_dist))])
+            assignment_proba -= assignment_proba.max()
+            assignment_proba *= -1
+            while True:
+                rand_vals = random_state.rand(n_reassigns)
+                rand_vals *= assignment_proba.sum()
+                new_centers = np.searchsorted(assignment_proba.cumsum(),
+                                            rand_vals)
+                if len(np.unique(new_centers)) != n_reassigns:
+                    # To avoid degenerate cases, we add a linear trend
+                    # to the distances, which makes the assignment proba
+                    # more homogeneous
+                    assignment_proba += (assignment_proba.max() *
+                                         np.arange(n_samples))
+                else:
+                    break
             if verbose:
                 print("[MiniBatchKMeans] Reassigning %i cluster centers."
                       % n_reassigns)
