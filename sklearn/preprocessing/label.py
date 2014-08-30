@@ -24,6 +24,7 @@ from ..utils import deprecated, column_or_1d
 from ..utils.validation import check_array
 from ..utils.multiclass import unique_labels
 from ..utils.multiclass import type_of_target
+from ..utils import SklearnDeprecationWarning
 
 from ..externals import six
 
@@ -470,7 +471,7 @@ def label_binarize(y, classes, neg_label=0, pos_label=1,
         warnings.warn("The multilabel parameter is deprecated as of version "
                       "0.15 and will be removed in 0.17. The parameter is no "
                       "longer necessary because the value is automatically "
-                      "inferred.", DeprecationWarning)
+                      "inferred.", SklearnDeprecationWarning)
 
     # To account for pos_label == 0 in the dense case
     pos_switch = pos_label == 0
@@ -647,7 +648,7 @@ def _inverse_binarize_thresholding(y, output_type, classes, threshold):
                       'representation will be unavailable from version 0.17. '
                       'Use sklearn.preprocessing.MultiLabelBinarizer to '
                       'convert to a label indicator representation.',
-                      DeprecationWarning)
+                      SklearnDeprecationWarning)
         mlb = MultiLabelBinarizer(classes=classes).fit([])
         return mlb.inverse_transform(y)
 

@@ -17,10 +17,6 @@ import re
 import warnings
 __version__ = '0.16-git'
 
-# Make sure that DeprecationWarning within this package always gets printed
-warnings.filterwarnings('always', category=DeprecationWarning,
-                        module='^{0}\.'.format(re.escape(__name__)))
-
 try:
     # This variable is injected in the __builtins__ by the build
     # process. It used to enable importing subpackages of sklearn when
@@ -36,6 +32,13 @@ if __SKLEARN_SETUP__:
 else:
     from . import __check_build
     from .base import clone
+
+    # Make sure that SklearnDeprecationWarning within this package always
+    # gets printed
+    from .utils import SklearnDeprecationWarning
+    warnings.filterwarnings('always', category=SklearnDeprecationWarning,
+                            module='^{0}\.'.format(re.escape(__name__)))
+
 
     __all__ = ['cross_validation', 'cluster', 'covariance',
                'datasets', 'decomposition', 'feature_extraction',

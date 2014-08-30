@@ -10,6 +10,7 @@ from sklearn.utils.testing import assert_raises
 from sklearn.utils.testing import assert_warns
 from sklearn.utils.testing import ignore_warnings
 from sklearn.utils.testing import assert_greater
+from sklearn.utils import SklearnDeprecationWarning
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.multiclass import OneVsOneClassifier
 from sklearn.multiclass import OutputCodeClassifier
@@ -219,7 +220,7 @@ def test_ovr_multilabel():
                      LinearRegression(), Ridge(),
                      ElasticNet(), Lasso(alpha=0.5)):
         # test input as lists of tuples
-        clf = assert_warns(DeprecationWarning,
+        clf = assert_warns(SklearnDeprecationWarning,
                            OneVsRestClassifier(base_clf).fit,
                            X, y)
         assert_equal(set(clf.classes_), classes)

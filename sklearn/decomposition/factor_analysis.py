@@ -27,7 +27,7 @@ from scipy import linalg
 
 from ..base import BaseEstimator, TransformerMixin
 from ..externals.six.moves import xrange
-from ..utils import check_array, check_random_state
+from ..utils import check_array, check_random_state, SklearnDeprecationWarning
 from ..utils.extmath import fast_logdet, fast_dot, randomized_svd, squared_norm
 from ..utils import ConvergenceWarning
 
@@ -138,7 +138,7 @@ class FactorAnalysis(BaseEstimator, TransformerMixin):
             warnings.warn('The `verbose` parameter has been deprecated and '
                           'will be removed in 0.16. To reduce verbosity '
                           'silence Python warnings instead.',
-                          DeprecationWarning)
+                          SklearnDeprecationWarning)
 
         self.verbose = verbose
         self.noise_variance_init = noise_variance_init

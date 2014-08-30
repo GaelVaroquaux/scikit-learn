@@ -11,6 +11,7 @@ from sklearn.preprocessing import LabelBinarizer, MultiLabelBinarizer
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_random_state
 from sklearn.utils import shuffle
+from sklearn.utils import SklearnDeprecationWarning
 
 from sklearn.utils.testing import assert_almost_equal
 from sklearn.utils.testing import assert_array_almost_equal
@@ -677,7 +678,8 @@ def test_multilabel_representation_invariance():
                                     % name)
 
         # Check deprecation warnings related to sequence of sequences
-        deprecated_metric = partial(assert_warns, DeprecationWarning, metric)
+        deprecated_metric = partial(assert_warns, SklearnDeprecationWarning,
+                                    metric)
 
         # Check representation invariance
         assert_almost_equal(deprecated_metric(y1, y2),
@@ -758,8 +760,8 @@ def test_normalize_option_multilabel_classification():
         metrics = ALL_METRICS[name]
 
         # List of list of labels
-        measure = assert_warns(DeprecationWarning, metrics, y_true, y_pred,
-                               normalize=True)
+        measure = assert_warns(SklearnDeprecationWarning, metrics,
+                               y_true, y_pred, normalize=True)
         assert_greater(measure, 0,
                        msg="We failed to test correctly the normalize option")
         assert_almost_equal(ignore_warnings(metrics)(y_true, y_pred,

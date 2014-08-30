@@ -36,6 +36,7 @@ from ..base import BaseEstimator
 from ..base import ClassifierMixin
 from ..base import RegressorMixin
 from ..utils import check_random_state, check_array, check_X_y, column_or_1d
+from ..utils import SklearnDeprecationWarning
 from ..utils.extmath import logsumexp
 from ..externals import six
 from ..feature_selection.from_model import _LearntSelectorMixin
@@ -952,7 +953,7 @@ class BaseGradientBoosting(six.with_metaclass(ABCMeta, BaseEnsemble,
     def oob_score_(self):
         warn("The oob_score_ argument is replaced by oob_improvement_"
              " as of version 0.14 and will be removed in 0.16.",
-             DeprecationWarning)
+             SklearnDeprecationWarning)
         try:
             return self._oob_score_
         except AttributeError:

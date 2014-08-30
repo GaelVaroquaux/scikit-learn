@@ -15,6 +15,7 @@ import scipy.sparse as sp
 
 from ..preprocessing import MultiLabelBinarizer
 from ..utils import check_array, check_random_state
+from ..utils import SklearnDeprecationWarning
 from ..utils import shuffle as util_shuffle
 from ..utils.fixes import astype
 from ..utils.random import sample_without_replacement
@@ -388,7 +389,7 @@ def make_multilabel_classification(n_samples=100, n_features=20, n_classes=5,
                       'a sparse indicator matrix. '
                       'return_indicator will default to True from version '
                       '0.17.',
-                      DeprecationWarning)
+                      SklearnDeprecationWarning)
 
     if return_distributions:
         return X, Y, p_c, p_w_c

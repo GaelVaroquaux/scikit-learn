@@ -13,6 +13,7 @@ from sklearn.utils.testing import assert_true
 from sklearn.utils.testing import assert_warns
 from sklearn.utils.testing import ignore_warnings
 from sklearn.utils.validation import check_random_state
+from sklearn.utils import SklearnDeprecationWarning
 from sklearn import neighbors, datasets
 
 rng = np.random.RandomState(0)
@@ -851,7 +852,7 @@ def test_callable_metric():
 
 
 def test_metric_params_interface():
-    assert_warns(DeprecationWarning, neighbors.KNeighborsClassifier,
+    assert_warns(SklearnDeprecationWarning, neighbors.KNeighborsClassifier,
                  metric='wminkowski', w=np.ones(10))
     assert_warns(SyntaxWarning, neighbors.KNeighborsClassifier,
                  metric_params={'p': 3})

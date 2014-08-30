@@ -19,13 +19,13 @@ from sklearn.utils.testing import assert_warns
 from sklearn.utils.testing import assert_warns_message
 from sklearn.utils.testing import ignore_warnings
 from sklearn.utils.mocking import CheckingClassifier, MockDataFrame
+from sklearn.utils import SklearnDeprecationWarning
 
 from sklearn import cross_validation as cval
 from sklearn.base import BaseEstimator
 from sklearn.datasets import make_regression
 from sklearn.datasets import load_digits
 from sklearn.datasets import load_iris
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import explained_variance_score
 from sklearn.metrics import make_scorer
 from sklearn.metrics import precision_score
@@ -745,19 +745,19 @@ def test_cross_val_generator_with_mask():
     X = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
     y = np.array([1, 1, 2, 2])
     labels = np.array([1, 2, 3, 4])
-    loo = assert_warns(DeprecationWarning, cval.LeaveOneOut,
+    loo = assert_warns(SklearnDeprecationWarning, cval.LeaveOneOut,
                        4, indices=False)
-    lpo = assert_warns(DeprecationWarning, cval.LeavePOut,
+    lpo = assert_warns(SklearnDeprecationWarning, cval.LeavePOut,
                        4, 2, indices=False)
-    kf = assert_warns(DeprecationWarning, cval.KFold,
+    kf = assert_warns(SklearnDeprecationWarning, cval.KFold,
                       4, 2, indices=False)
-    skf = assert_warns(DeprecationWarning, cval.StratifiedKFold,
+    skf = assert_warns(SklearnDeprecationWarning, cval.StratifiedKFold,
                        y, 2, indices=False)
-    lolo = assert_warns(DeprecationWarning, cval.LeaveOneLabelOut,
+    lolo = assert_warns(SklearnDeprecationWarning, cval.LeaveOneLabelOut,
                         labels, indices=False)
-    lopo = assert_warns(DeprecationWarning, cval.LeavePLabelOut,
+    lopo = assert_warns(SklearnDeprecationWarning, cval.LeavePLabelOut,
                         labels, 2, indices=False)
-    ss = assert_warns(DeprecationWarning, cval.ShuffleSplit,
+    ss = assert_warns(SklearnDeprecationWarning, cval.ShuffleSplit,
                       4, indices=False)
     for cv in [loo, lpo, kf, skf, lolo, lopo, ss]:
         for train, test in cv:
@@ -772,21 +772,21 @@ def test_cross_val_generator_with_indices():
     y = np.array([1, 1, 2, 2])
     labels = np.array([1, 2, 3, 4])
     # explicitly passing indices value is deprecated
-    loo = assert_warns(DeprecationWarning, cval.LeaveOneOut,
+    loo = assert_warns(SklearnDeprecationWarning, cval.LeaveOneOut,
                        4, indices=True)
-    lpo = assert_warns(DeprecationWarning, cval.LeavePOut,
+    lpo = assert_warns(SklearnDeprecationWarning, cval.LeavePOut,
                        4, 2, indices=True)
-    kf = assert_warns(DeprecationWarning, cval.KFold,
+    kf = assert_warns(SklearnDeprecationWarning, cval.KFold,
                       4, 2, indices=True)
-    skf = assert_warns(DeprecationWarning, cval.StratifiedKFold,
+    skf = assert_warns(SklearnDeprecationWarning, cval.StratifiedKFold,
                        y, 2, indices=True)
-    lolo = assert_warns(DeprecationWarning, cval.LeaveOneLabelOut,
+    lolo = assert_warns(SklearnDeprecationWarning, cval.LeaveOneLabelOut,
                         labels, indices=True)
-    lopo = assert_warns(DeprecationWarning, cval.LeavePLabelOut,
+    lopo = assert_warns(SklearnDeprecationWarning, cval.LeavePLabelOut,
                         labels, 2, indices=True)
     # Bootstrap as a cross-validation is deprecated
-    b = assert_warns(DeprecationWarning, cval.Bootstrap, 2)
-    ss = assert_warns(DeprecationWarning, cval.ShuffleSplit,
+    b = assert_warns(SklearnDeprecationWarning, cval.Bootstrap, 2)
+    ss = assert_warns(SklearnDeprecationWarning, cval.ShuffleSplit,
                       2, indices=True)
     for cv in [loo, lpo, kf, skf, lolo, lopo, b, ss]:
         for train, test in cv:

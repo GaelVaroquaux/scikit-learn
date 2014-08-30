@@ -21,6 +21,7 @@ import numpy as np
 from ..externals.six import string_types
 
 from .validation import check_array
+from . import SklearnDeprecationWarning
 
 
 def _unique_multiclass(y):
@@ -193,7 +194,7 @@ def is_sequence_of_sequences(y):
                       'representation will be unavailable from version 0.17. '
                       'Use sklearn.preprocessing.MultiLabelBinarizer to '
                       'convert to a label indicator representation.',
-                      DeprecationWarning)
+                      SklearnDeprecationWarning)
     return out
 
 

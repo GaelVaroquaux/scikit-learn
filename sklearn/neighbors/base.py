@@ -17,7 +17,7 @@ from .kd_tree import KDTree
 from ..base import BaseEstimator
 from ..metrics import pairwise_distances
 from ..metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
-from ..utils import check_X_y, check_array
+from ..utils import check_X_y, check_array, SklearnDeprecationWarning
 from ..utils.fixes import argpartition
 from ..utils.validation import DataConversionWarning
 from ..externals import six
@@ -104,7 +104,7 @@ class NeighborsBase(six.with_metaclass(ABCMeta, BaseEstimator)):
                           "function as **kwargs is deprecated "
                           "and will no longer be supported in 0.18. "
                           "Use metric_params instead.",
-                          DeprecationWarning, stacklevel=3)
+                          SklearnDeprecationWarning, stacklevel=3)
             if metric_params is None:
                 metric_params = {}
             metric_params.update(kwargs)

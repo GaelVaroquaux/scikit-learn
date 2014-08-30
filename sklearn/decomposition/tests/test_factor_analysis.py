@@ -4,6 +4,7 @@
 
 import numpy as np
 
+from sklearn.utils import SklearnDeprecationWarning
 from sklearn.utils.testing import assert_warns
 from sklearn.utils.testing import assert_equal
 from sklearn.utils.testing import assert_greater
@@ -71,7 +72,7 @@ def test_factor_analysis():
     fa1.max_iter = 1
     fa1.verbose = True
     assert_warns(ConvergenceWarning, fa1.fit, X)
-    assert_warns(DeprecationWarning, FactorAnalysis, verbose=1)
+    assert_warns(SklearnDeprecationWarning, FactorAnalysis, verbose=1)
 
     # Test get_covariance and get_precision with n_components == n_features
     # with n_components < n_features and with n_components == 0

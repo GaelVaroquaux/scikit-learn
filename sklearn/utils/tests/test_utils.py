@@ -9,7 +9,7 @@ from sklearn.utils.testing import (assert_equal, assert_raises, assert_true,
                                    SkipTest)
 
 from sklearn.utils import check_random_state
-from sklearn.utils import deprecated
+from sklearn.utils import deprecated, SklearnDeprecationWarning
 from sklearn.utils import resample
 from sklearn.utils import safe_mask
 from sklearn.utils import column_or_1d
@@ -57,7 +57,7 @@ def test_deprecated():
         assert_equal(spam, "spam")     # function must remain usable
 
         assert_equal(len(w), 1)
-        assert_true(issubclass(w[0].category, DeprecationWarning))
+        assert_true(issubclass(w[0].category, SklearnDeprecationWarning))
         assert_true("deprecated" in str(w[0].message).lower())
 
     # ... then a class.

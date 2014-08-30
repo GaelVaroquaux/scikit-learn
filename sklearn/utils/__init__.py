@@ -26,6 +26,12 @@ __all__ = ["murmurhash3_32", "as_float_array",
            "check_consistent_length", "check_X_y", 'indexable']
 
 
+class SklearnDeprecationWarning(DeprecationWarning):
+    """ Warning for scikit-learn deprecated code """
+
+    pass
+
+
 class deprecated(object):
     """Decorator to mark a function or class as deprecated.
 
@@ -72,7 +78,7 @@ class deprecated(object):
         init = cls.__init__
 
         def wrapped(*args, **kwargs):
-            warnings.warn(msg, category=DeprecationWarning)
+            warnings.warn(msg, category=SklearnDeprecationWarning)
             return init(*args, **kwargs)
         cls.__init__ = wrapped
 
@@ -90,7 +96,7 @@ class deprecated(object):
             msg += "; %s" % self.extra
 
         def wrapped(*args, **kwargs):
-            warnings.warn(msg, category=DeprecationWarning)
+            warnings.warn(msg, category=SklearnDeprecationWarning)
             return fun(*args, **kwargs)
 
         wrapped.__name__ = fun.__name__

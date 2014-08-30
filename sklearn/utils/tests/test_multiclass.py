@@ -22,6 +22,7 @@ from sklearn.utils.testing import assert_false
 from sklearn.utils.testing import assert_raises
 from sklearn.utils.testing import assert_warns
 from sklearn.utils.testing import ignore_warnings
+from sklearn.utils import SklearnDeprecationWarning
 
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.multiclass import is_label_indicator_matrix
@@ -168,11 +169,11 @@ def test_unique_labels():
     assert_array_equal(unique_labels([4, 0, 2]), np.array([0, 2, 4]))
 
     # Multilabels
-    assert_array_equal(assert_warns(DeprecationWarning,
+    assert_array_equal(assert_warns(SklearnDeprecationWarning,
                                     unique_labels,
                                     [(0, 1, 2), (0,), tuple(), (2, 1)]),
                        np.arange(3))
-    assert_array_equal(assert_warns(DeprecationWarning,
+    assert_array_equal(assert_warns(SklearnDeprecationWarning,
                                     unique_labels,
                                     [[0, 1, 2], [0], list(), [2, 1]]),
                        np.arange(3))
@@ -202,7 +203,7 @@ def test_unique_labels():
     assert_array_equal(unique_labels(["a", "b", "c"], ["d"]),
                        ["a", "b", "c", "d"])
 
-    assert_array_equal(assert_warns(DeprecationWarning, unique_labels,
+    assert_array_equal(assert_warns(SklearnDeprecationWarning, unique_labels,
                                     [["a", "b"], ["c"]], [["d"]]),
                        ["a", "b", "c", "d"])
 
@@ -315,7 +316,7 @@ def test_is_sequence_of_sequences():
     for group, group_examples in iteritems(EXAMPLES):
         if group == 'multilabel-sequences':
             assert_, exp = assert_true, 'True'
-            check = partial(assert_warns, DeprecationWarning,
+            check = partial(assert_warns, SklearnDeprecationWarning,
                             is_sequence_of_sequences)
         else:
             assert_, exp = assert_false, 'False'

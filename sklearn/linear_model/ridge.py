@@ -23,6 +23,7 @@ from ..utils.extmath import safe_sparse_dot
 from ..utils import check_X_y
 from ..utils import compute_class_weight
 from ..utils import column_or_1d
+from ..utils import SklearnDeprecationWarning
 from ..preprocessing import LabelBinarizer
 from ..grid_search import GridSearchCV
 from ..externals import six
@@ -178,9 +179,9 @@ def _solve_svd(X, y, alpha):
 
 def _deprecate_dense_cholesky(solver):
     if solver == 'dense_cholesky':
-        warnings.warn(DeprecationWarning("The name 'dense_cholesky' is "
-                                         "deprecated. Using 'cholesky' "
-                                         "instead. Changed in 0.15"))
+        warnings.warn(SklearnDeprecationWarning(
+                            "The name 'dense_cholesky' is deprecated. "
+                            "Using 'cholesky' instead. Changed in 0.15"))
         solver = 'cholesky'
 
     return solver

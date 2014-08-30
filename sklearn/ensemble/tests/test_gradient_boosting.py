@@ -12,6 +12,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.ensemble.gradient_boosting import ZeroEstimator
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import check_random_state, tosequence
+from sklearn.utils import SklearnDeprecationWarning
 from sklearn.utils.testing import assert_almost_equal
 from sklearn.utils.testing import assert_array_almost_equal
 from sklearn.utils.testing import assert_array_equal
@@ -536,7 +537,7 @@ def test_oob_score():
     clf = GradientBoostingClassifier(n_estimators=100, random_state=1,
                                      subsample=0.5)
     clf.fit(X, y)
-    assert_warns(DeprecationWarning, hasattr, clf, 'oob_score_')
+    assert_warns(SklearnDeprecationWarning, hasattr, clf, 'oob_score_')
 
 
 def test_oob_improvement():

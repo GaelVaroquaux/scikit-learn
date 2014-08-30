@@ -6,6 +6,7 @@ from functools import partial
 import numpy as np
 from sklearn.externals.six.moves import zip
 
+from sklearn.utils import SklearnDeprecationWarning
 from sklearn.utils.testing import assert_equal
 from sklearn.utils.testing import assert_array_equal
 from sklearn.utils.testing import assert_almost_equal
@@ -134,7 +135,8 @@ def test_make_classification_informative_features():
 
 def test_make_multilabel_classification_return_sequences():
     for allow_unlabeled, min_length in zip((True, False), (0, 1)):
-        X, Y = assert_warns(DeprecationWarning, make_multilabel_classification,
+        X, Y = assert_warns(SklearnDeprecationWarning,
+                            make_multilabel_classification,
                             n_samples=100, n_features=20, n_classes=3,
                             random_state=0, allow_unlabeled=allow_unlabeled)
         assert_equal(X.shape, (100, 20), "X shape mismatch")

@@ -12,6 +12,7 @@ from sklearn.utils.testing import assert_raises
 from sklearn.utils.testing import assert_raise_message
 from sklearn.utils.testing import assert_warns_message
 from sklearn.utils.testing import ignore_warnings
+from sklearn.utils import SklearnDeprecationWarning
 
 from sklearn import datasets
 from sklearn.metrics import mean_squared_error
@@ -640,10 +641,10 @@ def test_sparse_design_with_sample_weights():
 
 
 def test_deprecation_warning_dense_cholesky():
-    """Tests if DeprecationWarning is raised at instantiation of estimators
-    and when ridge_regression is called"""
+    """Tests if sklearnDeprecationWarning is raised at instantiation of
+    estimators and when ridge_regression is called"""
 
-    warning_class = DeprecationWarning
+    warning_class = SklearnDeprecationWarning
     warning_message = ("The name 'dense_cholesky' is deprecated."
                        " Using 'cholesky' instead")
 

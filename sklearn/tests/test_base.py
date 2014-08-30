@@ -1,6 +1,7 @@
 
 # Author: Gael Varoquaux
 # License: BSD 3 clause
+import warnings
 
 import numpy as np
 import scipy.sparse as sp
@@ -11,6 +12,7 @@ from sklearn.utils.testing import assert_false
 from sklearn.utils.testing import assert_equal
 from sklearn.utils.testing import assert_not_equal
 from sklearn.utils.testing import assert_raises
+from sklearn.utils import SklearnDeprecationWarning
 
 from sklearn.base import BaseEstimator, clone, is_classifier
 from sklearn.svm import SVC
@@ -44,8 +46,10 @@ class DeprecatedAttributeEstimator(BaseEstimator):
     def __init__(self, a=None, b=None):
         self.a = a
         if b is not None:
-            DeprecationWarning("b is deprecated and renamed 'a'")
-            self.a = b
+            warnings.warn("b is deprecated and renamed 'a'",
+                          SklearnDeprecationWarning,
+                          stacklevel=1)
+            self._b = b
 
     @property
     @deprecated("Parameter 'b' is deprecated and renamed to 'a'")

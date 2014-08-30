@@ -16,6 +16,9 @@ from sklearn.utils.testing import assert_raises
 from sklearn.utils.testing import assert_equal
 from sklearn.utils.testing import assert_almost_equal
 from sklearn.utils.testing import assert_array_almost_equal
+from sklearn.utils.testing import assert_array_equal
+from sklearn.utils.testing import assert_warns
+from sklearn.utils import SklearnDeprecationWarning
 
 from sklearn.cluster import Ward, WardAgglomeration, ward_tree
 from sklearn.cluster import AgglomerativeClustering, FeatureAgglomeration
@@ -27,8 +30,6 @@ from sklearn.metrics.pairwise import PAIRED_DISTANCES, cosine_distances,\
 from sklearn.metrics.cluster import normalized_mutual_info_score
 from sklearn.cluster._hierarchical import average_merge, max_merge
 from sklearn.utils.fast_dict import IntFloatDict
-from sklearn.utils.testing import assert_array_equal
-from sklearn.utils.testing import assert_warns
 
 
 def test_linkage_misc():
@@ -44,7 +45,7 @@ def test_linkage_misc():
 
     # Deprecation of Ward class
     with warnings.catch_warnings(record=True) as warning_list:
-        warnings.simplefilter("always", DeprecationWarning)
+        warnings.simplefilter("always", SklearnDeprecationWarning)
         Ward().fit(X)
     assert_equal(len(warning_list), 1)
 
@@ -92,7 +93,7 @@ def test_unstructured_linkage_tree():
         # With specified a number of clusters just for the sake of
         # raising a warning and testing the warning code
         with warnings.catch_warnings(record=True) as warning_list:
-            warnings.simplefilter("ignore", DeprecationWarning)
+            warnings.simplefilter("ignore", SklearnDeprecationWarning)
             children, n_nodes, n_leaves, parent = assert_warns(
                 UserWarning, ward_tree, this_X.T, n_clusters=10)
         n_nodes = 2 * X.shape[1] - 1
@@ -102,7 +103,7 @@ def test_unstructured_linkage_tree():
         for this_X in (X, X[0]):
             with warnings.catch_warnings(record=True) as warning_list:
                 warnings.simplefilter("always", UserWarning)
-                warnings.simplefilter("ignore", DeprecationWarning)
+                warnings.simplefilter("ignore", SklearnDeprecationWarning)
 
                 # With specified a number of clusters just for the sake of
                 # raising a warning and testing the warning code
@@ -206,9 +207,9 @@ def test_ward_agglomeration():
     mask = np.ones([10, 10], dtype=np.bool)
     X = rnd.randn(50, 100)
     connectivity = grid_to_graph(*mask.shape)
-    assert_warns(DeprecationWarning, WardAgglomeration)
+    assert_warns(SklearnDeprecationWarning, WardAgglomeration)
     with warnings.catch_warnings(record=True) as warning_list:
-        warnings.simplefilter("always", DeprecationWarning)
+        warnings.simplefilter("always", SklearnDeprecationWarning)
         if hasattr(np, 'VisibleDeprecationWarning'):
             # Let's not catch the numpy internal DeprecationWarnings
             warnings.simplefilter('ignore', np.VisibleDeprecationWarning)

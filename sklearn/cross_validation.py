@@ -23,6 +23,7 @@ import scipy.sparse as sp
 
 from .base import is_classifier, clone
 from .utils import indexable, check_random_state, safe_indexing
+from .utils import SklearnDeprecationWarning
 from .utils.validation import _num_samples, check_array
 from .utils.multiclass import type_of_target
 from .externals.joblib import Parallel, delayed, logger
@@ -61,7 +62,8 @@ class _PartitionIterator(with_metaclass(ABCMeta)):
             indices = True
         else:
             warnings.warn("The indices parameter is deprecated and will be "
-                          "removed (assumed True) in 0.17", DeprecationWarning,
+                          "removed (assumed True) in 0.17",
+                          SklearnDeprecationWarning,
                           stacklevel=1)
         if abs(n - int(n)) >= np.finfo('f').eps:
             raise ValueError("n must be an integer")
@@ -71,7 +73,8 @@ class _PartitionIterator(with_metaclass(ABCMeta)):
     @property
     def indices(self):
         warnings.warn("The indices attribute is deprecated and will be "
-                      "removed (assumed True) in 0.17", DeprecationWarning,
+                      "removed (assumed True) in 0.17",
+                      SklearnDeprecationWarning,
                       stacklevel=1)
         return self._indices
 
@@ -681,11 +684,13 @@ class Bootstrap(object):
         # behind this deprecation
         warnings.warn("Bootstrap will no longer be supported as a " +
                       "cross-validation method as of version 0.15 and " +
-                      "will be removed in 0.17", DeprecationWarning)
+                      "will be removed in 0.17",
+                      SklearnDeprecationWarning)
         self.n = n
         if n_bootstraps is not None:  # pragma: no cover
             warnings.warn("n_bootstraps was renamed to n_iter and will "
-                          "be removed in 0.16.", DeprecationWarning)
+                          "be removed in 0.16.",
+                          SklearnDeprecationWarning)
             n_iter = n_bootstraps
         self.n_iter = n_iter
         if (isinstance(train_size, numbers.Real) and train_size >= 0.0
@@ -755,7 +760,8 @@ class BaseShuffleSplit(with_metaclass(ABCMeta)):
             indices = True
         else:
             warnings.warn("The indices parameter is deprecated and will be "
-                          "removed (assumed True) in 0.17", DeprecationWarning)
+                          "removed (assumed True) in 0.17",
+                          SklearnDeprecationWarning)
         self.n = n
         self.n_iter = n_iter
         if n_iterations is not None:  # pragma: no cover
@@ -773,7 +779,8 @@ class BaseShuffleSplit(with_metaclass(ABCMeta)):
     @property
     def indices(self):
         warnings.warn("The indices attribute is deprecated and will be "
-                      "removed (assumed True) in 0.17", DeprecationWarning,
+                      "removed (assumed True) in 0.17",
+                      SklearnDeprecationWarning,
                       stacklevel=1)
         return self._indices
 
@@ -1358,7 +1365,8 @@ def _check_cv(cv, X=None, y=None, classifier=False, warn_mask=False):
     if isinstance(cv, numbers.Integral):
         if warn_mask and not needs_indices:
             warnings.warn('check_cv will return indices instead of boolean '
-                          'masks from 0.17', DeprecationWarning)
+                          'masks from 0.17',
+                          SklearnDeprecationWarning)
         else:
             needs_indices = None
         if classifier:
@@ -1549,7 +1557,8 @@ def train_test_split(*arrays, **options):
         raise TypeError("Invalid parameters passed: %s" % str(options))
     if force_arrays:
         warnings.warn("The force_arrays option is deprecated and will be "
-                      "removed in 0.18.", DeprecationWarning)
+                      "removed in 0.18.",
+                      SklearnDeprecationWarning)
         arrays = [check_array(x, 'csr', ensure_2d=False, force_all_finite=False)
                   if x is not None else x for x in arrays]
 

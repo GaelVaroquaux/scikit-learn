@@ -15,7 +15,7 @@ from scipy import sparse
 from .base import LinearModel, _pre_fit
 from ..base import RegressorMixin
 from .base import center_data, sparse_center_data
-from ..utils import check_array
+from ..utils import check_array, SklearnDeprecationWarning
 from ..utils.validation import check_random_state
 from ..cross_validation import _check_cv as check_cv
 from ..externals.joblib import Parallel, delayed
@@ -409,13 +409,13 @@ def enet_path(X, y, l1_ratio=0.5, eps=1e-3, n_alphas=100, alphas=None,
                       " `return_models` will eventually be removed in 0.16,"
                       " after which, returning alphas and coefs"
                       " will become the norm.",
-                      DeprecationWarning, stacklevel=2)
+                      SklearnDeprecationWarning, stacklevel=2)
 
     if normalize is True:
         warnings.warn("normalize param will be removed in 0.16."
                       " Intercept fitting and feature normalization will be"
                       " done in estimators.",
-                      DeprecationWarning, stacklevel=2)
+                      SklearnDeprecationWarning, stacklevel=2)
     else:
         normalize = False
 
@@ -423,7 +423,7 @@ def enet_path(X, y, l1_ratio=0.5, eps=1e-3, n_alphas=100, alphas=None,
         warnings.warn("fit_intercept param will be removed in 0.16."
                       " Intercept fitting and feature normalization will be"
                       " done in estimators.",
-                      DeprecationWarning, stacklevel=2)
+                      SklearnDeprecationWarning, stacklevel=2)
 
     if fit_intercept is None:
         fit_intercept = True
