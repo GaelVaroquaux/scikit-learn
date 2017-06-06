@@ -6,7 +6,7 @@ Release history
 ===============
 
 Version 0.19
-============
+==============
 
 **In Development**
 
@@ -64,6 +64,14 @@ New features
 
 Enhancements
 ............
+
+   - Added a `'eleven-point'` interpolated average precision option to
+     :func:`metrics.ranking.average_precision_score` as described in the
+     `PASCAL
+     Visual Object Classes (VOC) Challenge <http://citeseerx.ist.psu.edu/viewdoc/
+     download?doi=10.1.1.157.5766&rep=rep1&type=pdf>`_.
+     (`#7356 <https://github.com/scikit-learn/scikit-learn/pull/7356>`_). By
+     `Nick Dingwall`_ and `Gael Varoquaux`_
 
    - Update Sphinx-Gallery from 0.1.4 to 0.1.7 for resolving links in
      documentation build with Sphinx>1.5 :issue:`8010`, :issue:`7986`
@@ -192,6 +200,13 @@ Enhancements
 
 Bug fixes
 .........
+
+   - :func:`metrics.ranking.average_precision_score` no longer linearly
+     interpolates between operating points, and instead weights precisions
+     by the change in recall since the last operating point, as per the
+     `Wikipedia entry <http://en.wikipedia.org/wiki/Average_precision>`_.
+     (`#7356 <https://github.com/scikit-learn/scikit-learn/pull/7356>`_). By
+     `Nick Dingwall`_ and `Gael Varoquaux`_.
 
    - Fixed a bug in :class:`sklearn.covariance.MinCovDet` where inputting data
      that produced a singular covariance matrix would cause the helper method

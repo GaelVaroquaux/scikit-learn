@@ -36,10 +36,8 @@ from ..preprocessing import LabelBinarizer
 from .base import _average_binary_score
 
 
-def auc(x, y, reorder=False, interpolation='linear',
-        interpolation_direction='right'):
-    """Estimate Area Under the Curve (AUC) using finitely many points and an
-    interpolation strategy.
+def auc(x, y, reorder=False):
+    """Compute Area Under the Curve (AUC) using the trapezoidal rule
 
     This is a general function, given points on a curve.  For computing the
     area under the ROC-curve, see :func:`roc_auc_score`.
@@ -48,31 +46,11 @@ def auc(x, y, reorder=False, interpolation='linear',
     ----------
     x : array, shape = [n]
         x coordinates.
-
     y : array, shape = [n]
         y coordinates.
-
     reorder : boolean, optional (default=False)
         If True, assume that the curve is ascending in the case of ties, as for
         an ROC curve. If the curve is non-ascending, the result will be wrong.
-
-    interpolation : string ['trapezoid' (default), 'step']
-        This determines the type of interpolation performed on the data.
-
-        ``'linear'``:
-            Use the trapezoidal rule (linearly interpolating between points).
-        ``'step'``:
-            Use a step function where we ascend/descend from each point to the
-            y-value of the subsequent point.
-
-    interpolation_direction : string ['right' (default), 'left']
-        This determines the direction to interpolate from. The value is ignored
-        unless interpolation is 'step'.
-
-        ``'right'``:
-            Intermediate points inherit their y-value from the subsequent point.
-        ``'left'``:
-            Intermediate points inherit their y-value from the previous point.
 
     Returns
     -------
@@ -91,11 +69,16 @@ def auc(x, y, reorder=False, interpolation='linear',
     See also
     --------
     roc_auc_score : Computes the area under the ROC curve
-
     precision_recall_curve :
         Compute precision-recall pairs for different probability thresholds
-
     """
+    check_consistent_length(x, y)
+    x = column_or_1d(x)
+    y = column_or_1d(y)
+
+    if x.shape[0] < 2:
+        raise ValueError('At least 2 points are needed to compute'
+                         ' area under curve, but x.shape = %s' % x.shape)
 
     direction = 1
     if reorder:
@@ -112,42 +95,24 @@ def auc(x, y, reorder=False, interpolation='linear',
                 raise ValueError("Reordering is not turned on, and "
                                  "the x array is not increasing: %s" % x)
 
-    if interpolation == 'linear':
-
-        area = direction * np.trapz(y, x)
-
-    elif interpolation == 'step':
-
-        # we need the data to start in ascending order
-        if direction == -1:
-            x, y = list(reversed(x)), list(reversed(y))
-
-        if interpolation_direction == 'right':
-            # The left-most y-value is not used
-            area = sum(np.diff(x) * np.array(y)[1:])
-
-        elif interpolation_direction == 'left':
-            # The right-most y-value is not used
-            area = sum(np.diff(x) * np.array(y)[:-1])
-
-        else:
-            raise ValueError("interpolation_direction '{}' not recognised."
-                             " Should be one of ['right', 'left']".format(
-                                 interpolation_direction))
-    else:
-        raise ValueError("interpolation value '{}' not recognized. "
-                         "Should be one of ['linear', 'step']".format(
-                             interpolation))
-
+    area = direction * np.trapz(y, x)
+    if isinstance(area, np.memmap):
+        # Reductions such as .sum used internally in np.trapz do not return a
+        # scalar by default for numpy.memmap instances contrary to
+        # regular numpy.ndarray instances.
+        area = area.dtype.type(area)
     return area
 
 
 def average_precision_score(y_true, y_score, average="macro",
-                            sample_weight=None, interpolation="linear"):
+                            sample_weight=None, interpolation=None):
     """Compute average precision (AP) from prediction scores
 
-    This score corresponds to the area under the precision-recall curve, where
-    points are joined using either linear or step-wise interpolation.
+    Optionally, this will compute an eleven-point interpolated average
+    precision score: for each of the 11 evenly-spaced target recall values
+    [0, 0.1, 0.2, ... 1.0], we select the maximum precision possible while
+    meeting or exceeding the target recall, and average the 11 resulting
+    precision values.
 
     Note: this implementation is restricted to the binary classification task
     or multilabel classification task.
@@ -161,7 +126,8 @@ def average_precision_score(y_true, y_score, average="macro",
 
     y_score : array, shape = [n_samples] or [n_samples, n_classes]
         Target scores, can either be probability estimates of the positive
-        class, confidence values, or binary decisions.
+        class, confidence values, or non-thresholded measure of decisions
+        (as returned by "decision_function" on some classifiers).
 
     average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -182,15 +148,19 @@ def average_precision_score(y_true, y_score, average="macro",
     sample_weight : array-like of shape = [n_samples], optional
         Sample weights.
 
-    interpolation : string ['linear' (default), 'step']
-        Determines the kind of interpolation used when computed AUC. If there are
-        many repeated scores, 'step' is recommended to avoid under- or over-
-        estimating the AUC. See www.roamanalytics.com/etc for details.
+    interpolation : None (default), or 'eleven_point'
 
-        ``'linear'``:
-            Linearly interpolates between operating points.
-        ``'step'``:
-            Uses a step function to interpolate between operating points.
+        ``None``:
+            Do not interpolate the average precision. Instead, compute
+            ``sum(p[i] * (r[i] - r[i-1]))`` for all precision, recall pairs
+            ``p[i], r[i]`` for ``i >= 1``. This is the primary definition used
+            in the Wikipedia entry for Average precision. See References.
+        ``'eleven_point'``:
+            For each of the recall values, r, in {0, 0.1, 0.2, ..., 1.0},
+            compute the arithmetic mean of the first precision value with a
+            corresponding recall >= r. This metric is referenced in the Pascal
+            Visual Objects Classes (VOC) Challenge and is as described in the
+            Stanford Information Retrieval book. See References.
 
     Returns
     -------
@@ -200,6 +170,12 @@ def average_precision_score(y_true, y_score, average="macro",
     ----------
     .. [1] `Wikipedia entry for the Average precision
            <http://en.wikipedia.org/wiki/Average_precision>`_
+    .. [2] `Stanford Information Retrieval book
+            <http://nlp.stanford.edu/IR-book/html/htmledition/
+            evaluation-of-ranked-retrieval-results-1.html>`_
+    .. [3] `The PASCAL Visual Object Classes (VOC) Challenge
+            <http://citeseerx.ist.psu.edu/viewdoc/
+            download?doi=10.1.1.157.5766&rep=rep1&type=pdf>`_
 
     See also
     --------
@@ -215,28 +191,48 @@ def average_precision_score(y_true, y_score, average="macro",
     >>> y_true = np.array([0, 0, 1, 1])
     >>> y_scores = np.array([0.1, 0.4, 0.35, 0.8])
     >>> average_precision_score(y_true, y_scores)  # doctest: +ELLIPSIS
-    0.79...
+    0.83...
+
+    >>> yt = np.array([0, 0, 1, 1])
+    >>> ys = np.array([0.1, 0.4, 0.35, 0.8])
+    >>> ap = average_precision_score(yt, ys, interpolation='eleven_point')
+    >>> ap # doctest: +ELLIPSIS
+    0.84...
 
     """
-    def _binary_average_precision(y_true, y_score, sample_weight=None):
+    def _binary_uninterpolated_average_precision(
+            y_true, y_score, sample_weight=None):
         precision, recall, thresholds = precision_recall_curve(
             y_true, y_score, sample_weight=sample_weight)
-        return auc(recall, precision, interpolation=interpolation,
-                   interpolation_direction='right')
+        # Return the step function integral
+        return -np.sum(np.diff(recall) * np.array(precision)[:-1])
 
-    if interpolation == "linear":
-        # Check for number of unique predictions. If this is substantially less
-        # than the number of predictions, linear interpolation is likely to be
-        # biased.
-        n_discrete_predictions = len(np.unique(y_score))
-        if n_discrete_predictions < 0.75 * len(y_score):
-            warnings.warn("Number of unique scores is less than 75% of the "
-                          "number of scores provided. Linear interpolation "
-                          "is likely to be biased in this case. You may wish "
-                          "to use step interpolation instead. See docstring "
-                          "for details.")
-    return _average_binary_score(_binary_average_precision, y_true, y_score,
-                                 average, sample_weight=sample_weight)
+    def _binary_eleven_point_average_precision(
+            y_true, y_score, sample_weight=None):
+        precision, recall, thresholds = precision_recall_curve(
+            y_true, y_score, sample_weight=sample_weight)
+
+        # We need the recall values in ascending order, and to ignore the first
+        # (precision, recall) pair with precision = 1.
+        precision = precision[-2::-1]
+        recall = recall[-2::-1]
+
+        return np.mean([precision[i:].max() for i in
+                        np.searchsorted(recall, np.arange(0, 1.1, 0.1))])
+
+    if interpolation is None:
+        return _average_binary_score(_binary_uninterpolated_average_precision,
+                                     y_true, y_score, average,
+                                     sample_weight=sample_weight)
+
+    elif interpolation == 'eleven_point':
+        return _average_binary_score(_binary_eleven_point_average_precision,
+                                     y_true, y_score, average,
+                                     sample_weight=sample_weight)
+
+    else:
+        raise ValueError("interpolation has to be one of "
+                         "(None, 'eleven_point').")
 
 
 def roc_auc_score(y_true, y_score, average="macro", sample_weight=None):
@@ -308,7 +304,7 @@ def roc_auc_score(y_true, y_score, average="macro", sample_weight=None):
 
         fpr, tpr, tresholds = roc_curve(y_true, y_score,
                                         sample_weight=sample_weight)
-        return auc(fpr, tpr, reorder=True, interpolation='linear')
+        return auc(fpr, tpr, reorder=True)
 
     return _average_binary_score(
         _binary_roc_auc_score, y_true, y_score, average,
