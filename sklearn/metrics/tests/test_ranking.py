@@ -13,13 +13,11 @@ from sklearn.random_projection import sparse_random_matrix
 from sklearn.utils.validation import check_array, check_consistent_length
 from sklearn.utils.validation import check_random_state
 
-from sklearn.utils.testing import assert_raises, clean_warning_registry
-from sklearn.utils.testing import assert_raise_message
-from sklearn.utils.testing import assert_equal
-from sklearn.utils.testing import assert_almost_equal
-from sklearn.utils.testing import assert_array_equal
-from sklearn.utils.testing import assert_array_almost_equal
-from sklearn.utils.testing import assert_warns
+from sklearn.utils.testing import (assert_raises, clean_warning_registry,
+                                   assert_raise_message, assert_equal,
+                                   assert_almost_equal, assert_array_equal,
+                                   assert_array_almost_equal, assert_warns,
+                                   assert_allclose)
 
 from sklearn.metrics import auc
 from sklearn.metrics import average_precision_score
@@ -142,7 +140,9 @@ def _average_precision_slow(y_true, y_score):
     precision, recall, threshold = precision_recall_curve(y_true, y_score)
     precision = list(reversed(precision))
     recall = list(reversed(recall))
+
     average_precision = 0
+
     for i in range(1, len(precision)):
         average_precision += precision[i] * (recall[i] - recall[i - 1])
     return average_precision
@@ -153,12 +153,21 @@ def _interpolated_average_precision_slow(y_true, y_score):
     precision described by the Information Retrieval book. This should
     produce identical results to average_precision_score with
     `interpolation='eleven_point'`.
+
+    Reference:
+        https://nlp.stanford.edu/IR-book/html/htmledition/
+        evaluation-of-ranked-retrieval-results-1.html
     """
     precision, recall, _ = precision_recall_curve(y_true, y_score)
-    precision = list(reversed(precision))
-    recall = list(reversed(recall))
-    indices = np.searchsorted(recall, np.arange(0, 1.1, 0.1))
-    return np.mean([max(precision[i:]) for i in indices])
+
+    interpolated_ap = 0
+    recall_points = [0.0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0]
+    for recall_point in recall_points:
+        # highest precision achieved for at least this much recall
+        interpolated_ap += precision[recall >= recall_point].max()
+    interpolated_ap /= len(recall_points)
+
+    return interpolated_ap
 
 
 def test_roc_curve():
@@ -512,14 +521,15 @@ def _test_precision_recall_curve(y_true, probas_pred):
     precision_recall_auc = _average_precision_slow(y_true, probas_pred)
     interpolated_average_precision = _interpolated_average_precision_slow(
         y_true, probas_pred)
-    assert_array_almost_equal(precision_recall_auc, 0.859, 3)
-    assert_array_almost_equal(precision_recall_auc,
-                              average_precision_score(y_true, probas_pred))
-    assert_equal(interpolated_average_precision,
-                 average_precision_score(y_true, probas_pred,
-                                         interpolation='eleven_point'))
-    assert_almost_equal(_average_precision(y_true, probas_pred),
-                        precision_recall_auc, decimal=3)
+    print(precision_recall_auc)
+    assert_allclose(precision_recall_auc, 0.859, atol=0.001)
+    assert_allclose(precision_recall_auc,
+                    average_precision_score(y_true, probas_pred))
+    assert_allclose(interpolated_average_precision,
+                    average_precision_score(y_true, probas_pred,
+                                            interpolation='eleven_point'))
+    assert_allclose(_average_precision(y_true, probas_pred),
+                    precision_recall_auc, atol=0.001)
     assert_equal(p.size, r.size)
     assert_equal(p.size, thresholds.size + 1)
     # Smoke test in the case of proba having only one value
@@ -549,37 +559,37 @@ def test_precision_recall_curve_toydata():
         y_true = [0, 1]
         y_score = [1, 0]
         p, r, _ = precision_recall_curve(y_true, y_score)
-        auc_prc = average_precision_score(y_true, y_score)
+        ap = average_precision_score(y_true, y_score)
         assert_array_almost_equal(p, [0.5, 0., 1.])
         assert_array_almost_equal(r, [1., 0.,  0.])
         # Here we are doing a terrible prediction: we are always getting
         # it wrong, hence the average_precision_score is the accuracy at
         # change: 50%
-        assert_almost_equal(auc_prc, 0.5)
+        assert_almost_equal(ap, 0.5)
 
         y_true = [1, 0]
         y_score = [1, 1]
         p, r, _ = precision_recall_curve(y_true, y_score)
-        auc_prc = average_precision_score(y_true, y_score)
+        ap = average_precision_score(y_true, y_score)
         assert_array_almost_equal(p, [0.5, 1])
         assert_array_almost_equal(r, [1., 0])
-        assert_almost_equal(auc_prc, .5)
+        assert_almost_equal(ap, .5)
 
         y_true = [1, 0]
         y_score = [1, 0]
         p, r, _ = precision_recall_curve(y_true, y_score)
-        auc_prc = average_precision_score(y_true, y_score)
+        ap = average_precision_score(y_true, y_score)
         assert_array_almost_equal(p, [1, 1])
         assert_array_almost_equal(r, [1, 0])
-        assert_almost_equal(auc_prc, 1.)
+        assert_almost_equal(ap, 1.)
 
         y_true = [1, 0]
         y_score = [0.5, 0.5]
         p, r, _ = precision_recall_curve(y_true, y_score)
-        auc_prc = average_precision_score(y_true, y_score)
+        ap = average_precision_score(y_true, y_score)
         assert_array_almost_equal(p, [0.5, 1])
         assert_array_almost_equal(r, [1, 0.])
-        assert_almost_equal(auc_prc, .5)
+        assert_almost_equal(ap, .5)
 
         y_true = [0, 0]
         y_score = [0.25, 0.75]
